@@ -1,0 +1,85 @@
+{
+  "name": "Bowser",
+  "gpa": 2.5,
+  "classes": [{
+    "name": "Beating Mario",
+    "id": 0,
+    "professor": "Kamek",
+    "grade": {
+      "n": 95288,
+      "d": 110000
+    },
+    "categories": [
+      {
+        "name": "Mario Kart",
+        "id": 0,
+        "grade": {
+          "n": 65288,
+          "d": 70000
+        },
+        "assignments": [
+          {
+            "name": "Super Mario Kart",
+            "id": 0,
+            "grade": {
+              "n": 30000,
+              "d": 35000
+            }
+          },
+          {
+            "name": "Mario Kart 8",
+            "id": 1,
+            "grade": {
+              "n": 67000,
+              "d": 69000
+            }
+          }
+        ]
+      },
+      {
+        "name": "Yoshi's Island",
+        "id": 1,
+        "grade": {
+          "n": 31578,
+          "d": 30000
+        },
+        "assignments": [
+          {
+            "name": "SMW 2: Yoshi's Island",
+            "id": 0,
+            "grade": {
+              "n": 20000,
+              "d": 19000
+            }
+          }
+        ]
+      },
+      {
+        "name": "Super Mario Land",
+        "id": 2,
+        "grade": {
+          "n": 0,
+          "d": 10000
+        },
+        "assignments": [
+          {
+            "name": "Super Mario Land 1",
+            "id": 0,
+            "grade": {
+              "n": 0,
+              "d": 90000
+            }
+          },
+          {
+            "name": "Super Mario Land 2",
+            "id": 1,
+            "grade": {
+              "n": 0,
+              "d": 80000
+            }
+          }
+        ]
+      }
+    ]
+  }]
+}

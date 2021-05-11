@@ -1,0 +1,33 @@
+.ClassList {
+    border-collapse: collapse;
+    margin-left: 16px;
+    width: 80vw;
+}
+
+.ClassList th {
+    border: 1px solid;
+}
+
+.ClassList td {
+    border: 1px solid;
+}
+
+.ClassName {
+    width: 32vw;
+}
+
+.ProfName {
+    width: 32vw;
+}
+
+.Grade {
+    width: 6vw;
+}
+
+.Letter {
+    width: 2vw;
+}
+
+.Score {
+    width: 8vw;
+}
