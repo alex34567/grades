@@ -1,15 +1,5 @@
 .ClassList {
-    border-collapse: collapse;
-    margin-left: 16px;
     width: 80vw;
-}
-
-.ClassList th {
-    border: 1px solid;
-}
-
-.ClassList td {
-    border: 1px solid;
 }
 
 .ClassName {

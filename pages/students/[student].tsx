@@ -1,14 +1,19 @@
-import MOCK_STUDENT from '../../src/mockStudent.json'
+import MOCK_STUDENT from '../../lib/mockStudent.json'
 import styles from '../../styles/StudentLanding.module.css'
-import {fractionToLetterGrade, fractionToPercent, fractionToString} from '../../src/fraction'
+import bTable from '../../styles/BoarderedTable.module.css'
+import {fractionToLetterGrade, fractionToPercent, fractionToString} from '../../lib/fraction'
+import Link from 'next/link'
+import {useRouter} from "next/router";
 
 export default function StudentPage() {
+  const router = useRouter()
   const classRows = []
 
   for (const studentClass of MOCK_STUDENT.classes) {
+    const classUrl = `/students/${router.query.student}/classes/${studentClass.id}`
     classRows.push(
       <tr key={studentClass.id}>
-        <td>{studentClass.name}</td>
+        <td><Link href={classUrl}><a>{studentClass.name}</a></Link></td>
         <td>{studentClass.professor}</td>
         <td>{fractionToPercent(studentClass.grade)}</td>
         <td>{fractionToLetterGrade(studentClass.grade)}</td>
@@ -20,7 +25,7 @@ export default function StudentPage() {
   return (
     <div>
       <h1>{`Student Name: ${MOCK_STUDENT.name}`}</h1>
-      <table className={styles.ClassList}>
+      <table className={styles.ClassList + ' ' + bTable.BTable}>
         <colgroup>
           <col className={styles.ClassName} span={1}/>
           <col className={styles.ProfName} span={1}/>

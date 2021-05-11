@@ -1,0 +1,12 @@
+.BTable {
+    border-collapse: collapse;
+    margin-left: 16px;
+}
+
+.BTable th {
+    border: 1px solid;
+}
+
+.BTable td {
+    border: 1px solid;
+}
