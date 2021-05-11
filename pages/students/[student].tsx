@@ -1,6 +1,6 @@
 import MOCK_STUDENT from '../../src/mockStudent.json'
 import styles from '../../styles/StudentLanding.module.css'
-import {fractionToLetterGrade, fractionToPercent, fractionToString} from "../../src/fraction";
+import {fractionToLetterGrade, fractionToPercent, fractionToString} from '../../src/fraction'
 
 export default function StudentPage() {
   const classRows = []
@@ -21,13 +21,21 @@ export default function StudentPage() {
     <div>
       <h1>{`Student Name: ${MOCK_STUDENT.name}`}</h1>
       <table className={styles.ClassList}>
+        <colgroup>
+          <col className={styles.ClassName} span={1}/>
+          <col className={styles.ProfName} span={1}/>
+          <col className={styles.Grade} span={1}/>
+          <col className={styles.Letter} span={1}/>
+          <col className={styles.Score} span={1}/>
+        </colgroup>
+
         <thead>
           <tr>
-            <th scope='col' className={styles.ClassName}>Class Name</th>
-            <th scope='col' className={styles.ProfName}>Professor</th>
-            <th scope='col' className={styles.Grade}>Grade</th>
-            <th scope='col' className={styles.Letter}>Letter</th>
-            <th scope='col' className={styles.Score}>Score</th>
+            <th scope='col'>Class Name</th>
+            <th scope='col'>Professor</th>
+            <th scope='col'>Grade</th>
+            <th scope='col'>Letter</th>
+            <th scope='col'>Score</th>
           </tr>
         </thead>
         <tbody>

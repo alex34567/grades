@@ -13,21 +13,21 @@
 }
 
 .ClassName {
-    width: 32vw;
+    width: 40%;
 }
 
 .ProfName {
-    width: 32vw;
+    width: 40%;
 }
 
 .Grade {
-    width: 6vw;
+    width: 5%;
 }
 
 .Letter {
-    width: 2vw;
+    width: 5%;
 }
 
 .Score {
-    width: 8vw;
+    width: 10%;
 }

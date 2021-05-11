@@ -81,5 +81,66 @@
         ]
       }
     ]
+  },
+  {
+    "name": "Beating Up Nintendo Characters",
+    "id": 1,
+    "professor": "Masahiro Sakurai",
+    "grade": {
+      "n": 47058,
+      "d": 100000
+    },
+    "categories": [
+      {
+        "name": "Smash Bros.",
+        "id": 0,
+        "grade": {
+          "n": 47058,
+          "d": 100000
+        },
+        "assignments": [
+          {
+            "name": "Smash 64",
+            "id": 0,
+            "grade": {
+              "n": 0,
+              "d": 12
+            }
+          },
+          {
+            "name": "Melee",
+            "id": 1,
+            "grade": {
+              "n": 1,
+              "d": 26
+            }
+          },
+          {
+            "name": "Brawl",
+            "id": 2,
+            "grade": {
+              "n": 6,
+              "d": 38
+            }
+          },
+          {
+            "name": "Smash 4",
+            "id": 3,
+            "grade": {
+              "n": 32,
+              "d": 55
+            }
+          },
+          {
+            "name": "Smash Ultimate",
+            "id": 4,
+            "grade": {
+              "n": 65,
+              "d": 90
+            }
+          }
+        ]
+      }
+    ]
   }]
 }
