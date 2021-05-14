@@ -3,6 +3,9 @@ import {Fraction} from './types'
 // Internal representation of grades are in fractions of millipoints (1/1000 of a point)
 
 export function fractionToPercent(frac: Fraction): string {
+  if (frac.d === 0) {
+    return 'N/A'
+  }
   const value = Math.floor((frac.n * 10000) / frac.d);
   const wholeValue = Math.floor(value / 100);
   const fracValue = value % 100;
@@ -48,6 +51,9 @@ export function fractionToString(frac: Fraction): string {
 }
 
 export function fractionToLetterGrade(frac: Fraction): string {
+  if (frac.d === 0) {
+    return 'N/A'
+  }
   const value = Math.floor((frac.n * 10) / frac.d);
   if (value >= 9) {
     return 'A';

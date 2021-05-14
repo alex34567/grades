@@ -26,8 +26,17 @@ export default function TopBar(props: {user: ClientUser | null}) {
     )
   }
 
+  let classLink
+  if (props.user) {
+    classLink = <a href={`/students/${props.user.uuid}`}>Classes</a>
+  }
+
   return (
-    <div className={styles.LoginBar}>
+    <div className={styles.TopBar}>
+      <div className={styles.Home}>
+        {classLink}
+      </div>
+      <div className={styles.Padding}/>
       {userLogin}
     </div>
   )

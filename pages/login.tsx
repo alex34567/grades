@@ -48,7 +48,6 @@ export default function LoginPage() {
       }
     } catch (e) {
       setLoginError(e.toString())
-    } finally {
       setLoggingIn(false)
     }
   }

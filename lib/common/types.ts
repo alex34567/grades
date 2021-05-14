@@ -3,31 +3,28 @@ export interface Fraction {
   d: number
 }
 
-export interface Class {
+export interface ClientClass {
+  uuid: string,
   name: string,
-  professor: string,
-  id: number,
+  student_name: string,
+  professor_name: string,
   grade: Fraction,
-  categories: ClassCategory[],
+  categories: ClientClassCategory[],
 }
 
-export interface ClassCategory {
+export interface ClientClassCategory {
   name: string,
-  id: number,
+  uuid: string,
   grade: Fraction,
-  assignments: Assignment[],
+  weighted_grade: Fraction,
+  assignments: ClientAssignment[],
 }
 
-export interface Assignment {
+export interface ClientAssignment {
   name: string,
-  id: number,
+  uuid: string,
   grade: Fraction,
-}
-
-export interface Student {
-  name: string,
-  gpa: number,
-  classes: Class[],
+  weighted_grade: Fraction,
 }
 
 export interface ClientUser {
@@ -43,3 +40,11 @@ export enum UserType {
   professor,
   student,
 }
+
+export interface ClassOverview {
+  class_uuid: string
+  professor_name: string
+  name: string
+  grade: Fraction
+}
+

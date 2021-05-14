@@ -1,7 +1,11 @@
 .TopBar {
     width: 100vw;
-    height: 10vh;
+    height: 5rem;
     display: flex;
+}
+
+.Padding {
+    width: 60vw;
 }
 
 .Home {
