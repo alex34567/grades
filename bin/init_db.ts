@@ -74,6 +74,16 @@ export default async function initDb(client: MongoClient) {
     },
     name: 'class_student',
     unique: true,
+  }, {
+    key: {
+      student_uuid: 1,
+    },
+    name: 'student'
+  }, {
+    key: {
+      class_uuid: 1,
+    },
+    name: 'class'
   }])
 }
 

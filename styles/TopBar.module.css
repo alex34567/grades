@@ -1,0 +1,15 @@
+.TopBar {
+    width: 100vw;
+    height: 10vh;
+    display: flex;
+}
+
+.Home {
+    width: 20vw;
+    justify-content: left;
+}
+
+.UserLogin {
+    width: 20vw;
+    justify-content: end;
+}

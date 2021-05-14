@@ -1,5 +1,3 @@
-import MOCK_STUDENT from '../mockStudent.json'
-
 export interface Fraction {
   n: number,
   d: number
@@ -32,11 +30,16 @@ export interface Student {
   classes: Class[],
 }
 
+export interface ClientUser {
+  name: string,
+  type: UserType
+  uuid: string
+  csrf: string
+  error?: undefined
+}
+
 export enum UserType {
   admin,
   professor,
   student,
 }
-
-function typeCheckMock(_student: Student) {}
-typeCheckMock(MOCK_STUDENT);
