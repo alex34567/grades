@@ -2,8 +2,8 @@ import MOCK_STUDENT from '../../../../lib/mockStudent.json'
 import bTable from '../../../../styles/BoarderedTable.module.css'
 import styles from '../../../../styles/StudentClassView.module.css'
 import {GetServerSideProps} from 'next'
-import {Class} from '../../../../lib/types'
-import {fractionToLetterGrade, fractionToPercent, fractionToString} from '../../../../lib/fraction';
+import {Class} from '../../../../lib/common/types'
+import {fractionToLetterGrade, fractionToPercent, fractionToString} from '../../../../lib/common/fraction';
 import React from 'react'
 
 export const getServerSideProps: GetServerSideProps = async (context) => {

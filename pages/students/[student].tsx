@@ -1,9 +1,9 @@
 import MOCK_STUDENT from '../../lib/mockStudent.json'
 import styles from '../../styles/StudentLanding.module.css'
 import bTable from '../../styles/BoarderedTable.module.css'
-import {fractionToLetterGrade, fractionToPercent, fractionToString} from '../../lib/fraction'
+import {fractionToLetterGrade, fractionToPercent, fractionToString} from '../../lib/common/fraction'
 import Link from 'next/link'
-import {useRouter} from "next/router";
+import {useRouter} from 'next/router'
 
 export default function StudentPage() {
   const router = useRouter()
