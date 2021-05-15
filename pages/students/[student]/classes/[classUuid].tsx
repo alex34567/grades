@@ -69,6 +69,7 @@ export default function ClassView(rawProps: ClassViewProps | {error: number}) {
       <h1>{`Class: ${props.classView.name}`}</h1>
       <h2>{`Student: ${props.classView.student_name}`}</h2>
       <h2>{`Professor: ${props.classView.professor_name}`}</h2>
+      <h3>{`Grade: ${fractionToLetterGrade(props.classView.grade)} (${fractionToPercent(props.classView.grade)})`}</h3>
       <table className={styles.AssignmentTable + ' ' + bTable.BTable}>
         <tbody>
           {categories}

@@ -122,34 +122,29 @@ export async function logout(client: MongoClient, session: ClientSession, req: N
   return [sessionDeleteCookie()]
 }
 
-export async function login(client: MongoClient, session: MongoSession, req: NextApiRequest, res: NextApiResponse, user_name: string, password: string): Promise<string[] | undefined> {
-  const db = client.db()
-  const users = db.collection<DbUser>('users')
-  const user = await users.findOne({login_name: user_name}, {session})
-  const sessions = db.collection<Session>('sessions')
-  if (!user) {
-    return
-  }
+export async function validatePassword(dbUser: DbUser, password: string): Promise<boolean> {
+  const hash = await scrypt(password, dbUser.salt, 64)
+  return dbUser.password.compare(hash) === 0
+}
 
-  const hash = await scrypt(password, user.salt, 64)
-  if (user.password.compare(hash) !== 0) {
-    return
-  }
+export async function forgeSession(client: MongoClient, session: MongoSession, dbUser: DbUser): Promise<string> {
+  const db = client.db()
+  const sessions = db.collection<Session>('sessions')
 
   const new_token = await randomBytes(16)
   const csrf = await randomBytes(16)
   const new_session = {
     token: new_token,
-    user_uuid: user.uuid,
+    user_uuid: dbUser.uuid,
     persistent: false,
     expires: new Date(Date.now() + 1000 * 60 * 60 * 24),
     csrf,
   }
   await sessions.insertOne(new_session, {session})
-  const cookie = sessionSetCookie(new_session)
+  const ret = sessionSetCookie(new_session)
 
   let session_count = 0
-  const session_cursor = sessions.find({user_uuid: user.uuid, persistent: new_session.persistent}, {sort: {expires: -1}, batchSize: 20, session})
+  const session_cursor = sessions.find({user_uuid: dbUser.uuid, persistent: new_session.persistent}, {sort: {expires: -1}, batchSize: 20, session})
   try {
     let oldest_non_expired;
     // Keep the newest 20 sessions of the same persistent type
@@ -158,11 +153,43 @@ export async function login(client: MongoClient, session: MongoSession, req: Nex
       oldest_non_expired = (await session_cursor.next())!.expires
     }
     if (oldest_non_expired) {
-      await sessions.deleteMany({user_uuid: user.uuid, expires: {$lt: oldest_non_expired}, persistent: new_session.persistent}, {session})
+      await sessions.deleteMany({user_uuid: dbUser.uuid, expires: {$lt: oldest_non_expired}, persistent: new_session.persistent}, {session})
     }
   } finally {
     await session_cursor.close()
   }
+
+  return ret
+}
+
+export async function changePassword(client: MongoClient, session: MongoSession, dbUser: DbUser, password: string) {
+  const db = client.db()
+  const sessions = db.collection<Session>('sessions')
+  const users = db.collection<DbUser>('users')
+
+  await sessions.deleteMany({user_uuid: dbUser.uuid}, {session})
+  const newSalt = await randomBytes(16)
+  const newHash = await scrypt(password, newSalt, 64)
+
+  await users.updateOne({uuid: dbUser.uuid}, {$set: {
+    password: newHash,
+    salt: newSalt
+  }}, {session})
+}
+
+export async function login(client: MongoClient, session: MongoSession, req: NextApiRequest, res: NextApiResponse, user_name: string, password: string): Promise<string[] | undefined> {
+  const db = client.db()
+  const users = db.collection<DbUser>('users')
+  const user = await users.findOne({login_name: user_name}, {session})
+  if (!user) {
+    return
+  }
+
+  if (!(await validatePassword(user, password))) {
+    return
+  }
+
+  const cookie = await forgeSession(client, session, user)
 
   return [cookie]
 }

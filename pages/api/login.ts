@@ -1,6 +1,15 @@
 import {NextApiRequest, NextApiResponse} from 'next'
 import {connectToDB} from '../../lib/server/db'
-import {login, logout, userFromSessionNoValidate} from '../../lib/server/user'
+import {
+  changePassword,
+  DbUser, forgeSession,
+  login,
+  logout,
+  sessionErrorToHttpStatus,
+  sessionErrorToString,
+  userFromSessionNoValidate, validatePassword
+} from '../../lib/server/user'
+import {ClientUser} from "../../lib/common/types";
 
 export interface LoginResponse {
   status: string,
@@ -111,6 +120,106 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
           body: {
             status: 'Logged Out',
             logged_in: false,
+          }
+        }
+      } else if (req.body.command === 'change_password') {
+        if (user.error) {
+          return {
+            cookies,
+            statusCode: sessionErrorToHttpStatus(user.error),
+            body: {
+              status: sessionErrorToString(user.error),
+              logged_in: logged_in
+            }
+          }
+        }
+
+        let old_password: string
+        if (typeof req.body.old_password === 'string') {
+          old_password = req.body.old_password
+        } else {
+          return {
+            cookies,
+            statusCode: 400,
+            body: {
+              status: 'Invalid old password',
+              logged_in: logged_in
+            }
+          }
+        }
+
+        let new_password: string
+        if (typeof req.body.new_password === 'string') {
+          new_password = req.body.new_password
+        } else {
+          return {
+            cookies,
+            statusCode: 400,
+            body: {
+              status: 'Invalid new password',
+              logged_in: logged_in
+            }
+          }
+        }
+
+        if (old_password === new_password) {
+          return {
+            cookies,
+            statusCode: 400,
+            body: {
+              status: 'Old password cannot be the same as new password',
+              logged_in: logged_in
+            }
+          }
+        }
+
+        if (new_password.length < 8) {
+          return {
+            cookies,
+            statusCode: 400,
+            body: {
+              status: 'New password too small',
+              logged_in: logged_in
+            }
+          }
+        }
+
+        if (new_password.length > 64) {
+          return {
+            cookies,
+            statusCode: 400,
+            body: {
+              status: 'New password too big',
+              logged_in: logged_in
+            }
+          }
+        }
+
+        const db = client.db()
+        const users = db.collection<DbUser>('users')
+        const dbUser = (await users.findOne({uuid: (user as ClientUser).uuid}, {session}))!
+
+        if (!(await validatePassword(dbUser, old_password))) {
+          return {
+            cookies,
+            statusCode: 403,
+            body: {
+              status: 'Old password does not match current password',
+              logged_in: false
+            }
+          }
+        }
+
+        await changePassword(client, session, dbUser, new_password)
+
+        cookies = [await forgeSession(client, session, dbUser)]
+
+        return {
+          cookies,
+          statusCode: 200,
+          body: {
+            status: 'Password change successful',
+            logged_in
           }
         }
       } else {

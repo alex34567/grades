@@ -38,6 +38,7 @@ export default function LoginPage() {
       const loginJson = await loginResponse.json()
       if (!loginResponse.ok) {
         setLoginError(loginJson.status)
+        setLoggingIn(false)
       } else {
         setLoginError(undefined)
         if (typeof router.query.redirect === 'string') {
