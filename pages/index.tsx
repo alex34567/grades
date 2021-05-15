@@ -2,10 +2,10 @@ import React from 'react'
 import TopBar from "../lib/client/TopBar";
 import {GetServerSideProps} from "next";
 import {connectToDB} from "../lib/server/db";
-import {userFromSession} from "../lib/server/user";
-import {ClientUser, UserType} from "../lib/common/types";
+import {UserType} from "../lib/common/types";
 import {genStudentClassOverview} from "../lib/server/class";
 import StudentPage from "./students/[student]";
+import {htmlTransactionWithUser} from "../lib/server/util";
 
 interface IndexProps {
   type: HomepageTypes
@@ -20,12 +20,9 @@ enum HomepageTypes {
 export const getServerSideProps: GetServerSideProps = async (context) => {
   const client = await connectToDB()
 
-  const rawUser = await userFromSession(client, context.req, context.res)
-
-  if (!rawUser.error) {
-    const user = rawUser as ClientUser
+  return await htmlTransactionWithUser(client, context, async (session, user) => {
     if (user.type === UserType.student) {
-      const studentProps = await genStudentClassOverview(context, true)
+      const studentProps = await genStudentClassOverview(context, client, session, true, user)
       return {
         props: {
           type: HomepageTypes.student,
@@ -33,14 +30,21 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         }
       }
     }
-  }
 
-  return {
-    props: {
-      type: HomepageTypes.loggedOut,
-      props: {}
+    return {
+      props: {
+        type: HomepageTypes.loggedOut,
+        props: {}
+      }
     }
-  }
+  }, async () => {
+    return {
+      props: {
+        type: HomepageTypes.loggedOut,
+        props: {}
+      }
+    }
+  })
 }
 
 export function LoggedOut() {

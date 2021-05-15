@@ -7,9 +7,14 @@ import {GetServerSideProps} from "next";
 import {ClassOverview, ClientUser} from "../../lib/common/types";
 import {genStudentClassOverview} from "../../lib/server/class";
 import Error from 'next/error'
+import {connectToDB} from "../../lib/server/db";
+import {htmlTransactionWithUser} from "../../lib/server/util";
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
-  return await genStudentClassOverview(context, false)
+  const client = await connectToDB()
+  return await htmlTransactionWithUser(client, context, async (session, thisUser) => {
+    return await genStudentClassOverview(context, client, session, false, thisUser)
+  })
 }
 
 export interface StudentPageProps {

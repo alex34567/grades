@@ -16,6 +16,7 @@ export async function connectToDB(): Promise<MongoClient> {
   const client = new MongoClient(uri, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
+    promoteBuffers: true,
   });
 
   try {

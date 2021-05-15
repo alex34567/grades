@@ -1,11 +1,12 @@
-import {MongoClient} from 'mongodb'
+import {ClientSession, MongoClient} from 'mongodb'
 import {v4 as uuidv4} from 'uuid'
 import * as crypto from 'crypto'
 import {promisify} from 'util'
 import {NextApiRequest, NextApiResponse} from 'next'
 import {ClientUser, UserType} from "../common/types";
-import {IncomingMessage, ServerResponse} from "http";
+import {IncomingMessage} from "http";
 import {NextApiRequestCookies} from "next/dist/next-server/server/api-utils";
+import {ClientSession as MongoSession} from 'mongodb'
 
 const randomBytes = promisify(crypto.randomBytes)
 const scrypt = promisify<crypto.BinaryLike, crypto.BinaryLike, number, Buffer>(crypto.scrypt)
@@ -43,7 +44,12 @@ export interface Session {
   csrf: Buffer
 }
 
-export async function createUser(client: MongoClient, login_name: string, name: string, password: string, type: UserType): Promise<User> {
+interface WithCookies<T> {
+  cookies: string[],
+  data: T,
+}
+
+export async function createUser(client: MongoClient, session: MongoSession, login_name: string, name: string, password: string, type: UserType): Promise<User> {
   const db = client.db()
 
   const users = await db.collection<DbUser>('users')
@@ -64,12 +70,12 @@ export async function createUser(client: MongoClient, login_name: string, name: 
     type,
   }
 
-  await users.insertOne(db_user)
+  await users.insertOne(db_user, {session})
 
   return new User(db_user)
 }
 
-function sessionSetCookie(session: Session, res: ServerResponse) {
+function sessionSetCookie(session: Session): string {
   const production = process.env.NODE_ENV === 'production'
   let secure_string = ''
   let cookie_name = 'session'
@@ -81,11 +87,10 @@ function sessionSetCookie(session: Session, res: ServerResponse) {
   if (session.persistent) {
     expires = `Expires=${session.expires.toUTCString()}; `
   }
-  res.setHeader('Set-Cookie', [
-    `${cookie_name}=${session.token.toString('base64')}; ${secure_string}${expires}HttpOnly; Path=/; SameSite=Lax`])
+  return `${cookie_name}=${session.token.toString('base64')}; ${secure_string}${expires}HttpOnly; Path=/; SameSite=Lax`
 }
 
-function sessionDeleteCookie(res: ServerResponse) {
+function sessionDeleteCookie() {
   const production = process.env.NODE_ENV === 'production'
   let secure_string = ''
   let cookie_name = 'session'
@@ -93,40 +98,42 @@ function sessionDeleteCookie(res: ServerResponse) {
     secure_string = 'Secure; '
     cookie_name = '__Secure-session'
   }
-  res.setHeader('Set-Cookie', [
-    `${cookie_name}=x; ${secure_string}HttpOnly; Path=/; SameSite=Lax; Expires=${new Date(0).toUTCString()}; Max-Age=0`])
+  return `${cookie_name}=x; ${secure_string}HttpOnly; Path=/; SameSite=Lax; Expires=${new Date(0).toUTCString()}; Max-Age=0`
 }
 
-export async function logout(client: MongoClient, req: NextApiRequest, res: NextApiResponse) {
+export async function logout(client: MongoClient, session: ClientSession, req: NextApiRequest) {
   const db = client.db()
-  const session = await getSession(client, req, res)
+  const rawClassSession = await getSession(client, session, req)
+  const classSession = rawClassSession.data
 
-  if (!session) {
-    return
+  if (!classSession) {
+    return []
   }
 
   const sessions = await db.collection<Session>('sessions')
-  await sessions.deleteOne({token: session.token})
-  if (session.old_session) {
-    await sessions.deleteOne({token: session.old_session})
+  await sessions.deleteOne({token: classSession.token}, {session})
+  if (classSession.old_session) {
+    await sessions.deleteOne({token: classSession.old_session}, {session})
   }
-  if (session.new_session) {
-    await sessions.deleteOne({token: session.new_session})
+  if (classSession.new_session) {
+    await sessions.deleteOne({token: classSession.new_session}, {session})
   }
+
+  return [sessionDeleteCookie()]
 }
 
-export async function login(client: MongoClient, req: NextApiRequest, res: NextApiResponse, user_name: string, password: string): Promise<boolean> {
+export async function login(client: MongoClient, session: MongoSession, req: NextApiRequest, res: NextApiResponse, user_name: string, password: string): Promise<string[] | undefined> {
   const db = client.db()
-  const users = await db.collection<DbUser>('users')
-  const user = await users.findOne({login_name: user_name}, {promoteBuffers: true})
-  const sessions = await db.collection<Session>('sessions')
+  const users = db.collection<DbUser>('users')
+  const user = await users.findOne({login_name: user_name}, {session})
+  const sessions = db.collection<Session>('sessions')
   if (!user) {
-    return false
+    return
   }
 
   const hash = await scrypt(password, user.salt, 64)
   if (user.password.compare(hash) !== 0) {
-    return false
+    return
   }
 
   const new_token = await randomBytes(16)
@@ -138,11 +145,11 @@ export async function login(client: MongoClient, req: NextApiRequest, res: NextA
     expires: new Date(Date.now() + 1000 * 60 * 60 * 24),
     csrf,
   }
-  await sessions.insertOne(new_session)
-  sessionSetCookie(new_session, res)
+  await sessions.insertOne(new_session, {session})
+  const cookie = sessionSetCookie(new_session)
 
   let session_count = 0
-  const session_cursor = sessions.find({user_uuid: user.uuid, persistent: new_session.persistent}, {sort: {expires: -1}, batchSize: 20})
+  const session_cursor = sessions.find({user_uuid: user.uuid, persistent: new_session.persistent}, {sort: {expires: -1}, batchSize: 20, session})
   try {
     let oldest_non_expired;
     // Keep the newest 20 sessions of the same persistent type
@@ -151,36 +158,44 @@ export async function login(client: MongoClient, req: NextApiRequest, res: NextA
       oldest_non_expired = (await session_cursor.next())!.expires
     }
     if (oldest_non_expired) {
-      sessions.deleteMany({user_uuid: user.uuid, expires: {$lt: oldest_non_expired}, persistent: new_session.persistent})
+      await sessions.deleteMany({user_uuid: user.uuid, expires: {$lt: oldest_non_expired}, persistent: new_session.persistent}, {session})
     }
   } finally {
     await session_cursor.close()
   }
 
-  return true
+  return [cookie]
 }
 
-async function getSession(client: MongoClient, req: IncomingMessage & { cookies: NextApiRequestCookies }, res: ServerResponse): Promise<Session | undefined> {
+async function getSession(client: MongoClient, session: ClientSession, req: IncomingMessage & { cookies: NextApiRequestCookies }): Promise<WithCookies<Session | undefined>> {
   let cookie_name = 'session'
   if (process.env.NODE_ENV === 'production') {
     cookie_name = '__Secure-session'
   }
   const cookie = req.cookies[cookie_name]
   if (!cookie) {
-    return
+    return {
+      cookies: [],
+      data: undefined
+    }
   }
   const token = Buffer.from(cookie, 'base64')
   const db = client.db()
 
-  const sessions = await db.collection<Session>('sessions')
+  const sessions = db.collection<Session>('sessions')
 
-  const session = await sessions.findOne({token}, {promoteBuffers: true})
-  if (!session) {
-    sessionDeleteCookie(res)
-    return
+  const classSession = await sessions.findOne({token}, {session})
+  if (!classSession) {
+    return {
+      cookies: [sessionDeleteCookie()],
+      data: undefined
+    }
   }
 
-  return session
+  return {
+    cookies: [],
+    data: classSession
+  }
 }
 
 export enum SessionError {
@@ -206,79 +221,105 @@ export function sessionErrorToHttpStatus(error: SessionError): number {
   }
 }
 
-export async function userFromSessionNoValidate(client: MongoClient, req: IncomingMessage & { cookies: NextApiRequestCookies }, res: ServerResponse): Promise<ClientUser | { error: SessionError }> {
-  const session = await getSession(client, req, res)
+export async function userFromSessionNoValidate(client: MongoClient, session: ClientSession, req: IncomingMessage & { cookies: NextApiRequestCookies }): Promise<WithCookies<ClientUser | { error: SessionError }>> {
+  const rawClassSession = await getSession(client, session, req)
+  let cookies = rawClassSession.cookies
+  const classSession = rawClassSession.data
 
   const db = client.db()
-  const sessions = await db.collection<Session>('sessions')
-  const users = await db.collection<DbUser>('users')
+  const sessions = db.collection<Session>('sessions')
+  const users = db.collection<DbUser>('users')
 
-  if (!session) {
-    return {error: SessionError.NotLoggedIn}
+  if (!classSession) {
+    return {
+      cookies,
+      data: {
+        error: SessionError.NotLoggedIn
+      }
+    }
   }
   let renew_time = 1000 * 60 * 60 * 12
   let new_session_time = 1000 * 60 * 60 * 24
-  if (session.persistent) {
+  if (classSession.persistent) {
     renew_time = 1000 * 60 * 60 * 24
     new_session_time = 1000 * 60 * 60 * 24 * 365
   }
   const now = Date.now();
-  if (session.old_session) {
-    await sessions.deleteOne({token: session.old_session})
-    delete session.old_session
-    await sessions.replaceOne({token: session.token}, session)
+  if (classSession.old_session) {
+    await sessions.deleteOne({token: classSession.old_session}, {session})
+    delete classSession.old_session
+    await sessions.replaceOne({token: classSession.token}, classSession, {session})
   }
-  if (session.expires.getTime() < now) {
-    await sessions.deleteOne({token: session.token})
-    sessionDeleteCookie(res)
-    return {error: SessionError.NotLoggedIn}
+  if (classSession.expires.getTime() < now) {
+    await sessions.deleteOne({token: classSession.token}, {session})
+    cookies = [sessionDeleteCookie()]
+    return {
+      cookies,
+      data: {
+        error: SessionError.NotLoggedIn
+      }
+    }
   }
-  if (session.expires.getTime() - now < renew_time && !session.new_session) {
+  if (classSession.expires.getTime() - now < renew_time && !classSession.new_session) {
     const new_token = await randomBytes(16)
     const csrf = await randomBytes(16)
     const new_session = {
-      old_session: session.token,
+      old_session: classSession.token,
       token: new_token,
-      user_uuid: session.user_uuid,
-      persistent: session.persistent,
+      user_uuid: classSession.user_uuid,
+      persistent: classSession.persistent,
       expires: new Date(now + new_session_time),
       csrf,
     }
-    session.new_session = new_token
-    await sessions.insertOne(new_session)
-    await sessions.replaceOne({token: session.token}, session)
-    sessionSetCookie(new_session, res)
+    classSession.new_session = new_token
+    await sessions.insertOne(new_session, {session})
+    await sessions.replaceOne({token: classSession.token}, classSession, {session})
+    cookies = [sessionSetCookie(new_session)]
   }
-  if (session.new_session) {
-    const new_session = await sessions.findOne({token: session.new_session}, {promoteBuffers: true})
+  if (classSession.new_session) {
+    const new_session = await sessions.findOne({token: classSession.new_session}, {session})
     if (new_session) {
-      sessionSetCookie(new_session, res)
+      cookies = [sessionSetCookie(new_session)]
     }
   }
 
-  const db_user = await users.findOne({uuid: session.user_uuid}, {projection: {password: 0, salt: 0}})
+  const db_user = await users.findOne({uuid: classSession.user_uuid}, {projection: {password: 0, salt: 0}, session})
   if (!db_user) {
-    await sessions.deleteOne({token: session.token})
-    return {error: SessionError.NotLoggedIn}
+    await sessions.deleteOne({token: classSession.token}, {session})
+    return {
+      cookies,
+      data: {
+        error: SessionError.NotLoggedIn
+      }
+    }
   }
 
   return {
-    name: db_user.name,
-    uuid: db_user.uuid,
-    type: db_user.type,
-    csrf: session.csrf.toString('base64'),
+    cookies,
+    data: {
+      name: db_user.name,
+      uuid: db_user.uuid,
+      type: db_user.type,
+      csrf: classSession.csrf.toString('base64'),
+    }
   }
 }
 
-export async function userFromSession(client: MongoClient, req: IncomingMessage & { cookies: NextApiRequestCookies }, res: ServerResponse): Promise<ClientUser | { error: SessionError }> {
-  const user = await userFromSessionNoValidate(client, req, res)
+export async function userFromSession(client: MongoClient, session: ClientSession, req: IncomingMessage & { cookies: NextApiRequestCookies }): Promise<WithCookies<ClientUser | { error: SessionError }>> {
+  const rawUser = await userFromSessionNoValidate(client, session, req)
+  const user = rawUser.data
   if (typeof user.error !== 'undefined') {
-    return user
+    return rawUser
   }
   if (req.method === 'POST' || req.method === 'PUT') {
     if (req.headers['x-grades-csrf'] !== (user as ClientUser).csrf) {
-      return {error: SessionError.CSRFMissing}
+      return {
+        cookies: rawUser.cookies,
+        data: {
+          error: SessionError.CSRFMissing
+        }
+      }
     }
   }
-  return user
+  return rawUser
 }

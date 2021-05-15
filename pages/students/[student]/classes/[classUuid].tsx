@@ -9,10 +9,10 @@ import Error from "next/error";
 import TopBar from "../../../../lib/client/TopBar";
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
-  return await genStudentClassView(context)
+  return (await genStudentClassView(context))!
 }
 
-interface ClassViewProps {
+export interface ClassViewProps {
   classView: ClientClass
   user: ClientUser
 }
