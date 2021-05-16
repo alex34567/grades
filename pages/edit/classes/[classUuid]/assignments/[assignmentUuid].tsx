@@ -50,8 +50,18 @@ export default function ModifyAssignment(rawProps: EditAssignmentProps | {error:
   const [status, setStatus] = useState<string>()
   const [updating, setUpdating] = useState<boolean>()
   const [gradeValues, setGradeValues] = useState<Immutable.Map<string, string>>(initGradeValues)
-  const [name, setName] = useState(props.assignment.name)
-  const [maxPoints, setMaxPoints] = useState(millipointToString(props.assignment.max_points))
+  const [name, setName] = useState(() => {
+    if (error) {
+      return ''
+    }
+    return props.assignment.name
+  })
+  const [maxPoints, setMaxPoints] = useState(() => {
+    if (error) {
+      return ''
+    }
+    return millipointToString(props.assignment.max_points)
+  })
   const [selectedCategory, setSelectedCategory] = useState(() => {
     if (error) {
       return ''
@@ -59,10 +69,13 @@ export default function ModifyAssignment(rawProps: EditAssignmentProps | {error:
     return props.assignment.categoryUuid
   })
   const sortedGrades = useMemo(() => {
+    if (error) {
+      return []
+    }
     const ret = props.grades.concat()
     ret.sort((lhs, rhs) => lhs.studentName.localeCompare(rhs.studentName))
     return ret
-  }, [props.grades])
+  }, [props?.grades])
 
   function onChangeName(event: ChangeEvent<HTMLInputElement>) {
     setName(event.target.value)

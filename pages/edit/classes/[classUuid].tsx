@@ -1,12 +1,14 @@
 import {GetServerSideProps} from "next";
 import {genProfessorClassView} from "../../../lib/server/class";
 import {ClientClass, ClientUser} from "../../../lib/common/types";
-import Error from "next/error";
-import React from "react";
+import React, {useState} from "react";
 import TopBar from "../../../lib/client/TopBar";
 import mainTable from "../../../styles/MainTable.module.css";
 import Link from 'next/link'
 import {millipointToString} from "../../../lib/common/fraction";
+import {sendApiPostRequest} from "../../../lib/client/util";
+import {useRouter} from "next/router";
+import ErrorHandler, {HtmlError} from "../../../lib/client/ErrorHandler";
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
   return (await genProfessorClassView(context))!
@@ -17,16 +19,40 @@ export interface ClassViewProps {
   user: ClientUser
 }
 
-export default function ClassEdit(rawProps: ClassViewProps | {error: number}) {
-  if (typeof (rawProps as any).error !== 'undefined') {
-    return <Error statusCode={(rawProps as any).error}/>
-  }
-  const props = rawProps as ClassViewProps
+export function ClassEdit(props: ClassViewProps) {
+  const [updating, setUpdating] = useState(false)
+  const [status, setStatus] = useState('')
+  const router = useRouter()
 
   const categories = []
   for (const category of props.classView.categories) {
     const assignments = []
     for (const assignment of category.assignments) {
+      async function onDelete() {
+        if (updating) {
+          return
+        }
+
+        if (!confirm(`Are you sure that you want to delete ${assignment.name}?`)) {
+          return
+        }
+
+        setUpdating(true)
+        setStatus('Deleting')
+
+        try {
+          await sendApiPostRequest(props.user, '/api/class', {
+            command: 'delete_assignment',
+            classUuid: props.classView.uuid,
+            assignmentUuid: assignment.uuid
+          })
+          router.reload()
+        } catch (e) {
+          setStatus(e.toString())
+          setUpdating(false)
+        }
+      }
+
       const assignmentEditUrl = `/edit/classes/${props.classView.uuid}/assignments/${assignment.uuid}`
       assignments.push(
         <tr key={assignment.uuid}>
@@ -35,12 +61,13 @@ export default function ClassEdit(rawProps: ClassViewProps | {error: number}) {
           <td>
             <Link href={assignmentEditUrl}>Edit</Link>
             <span> </span>
-            <a href='#'>Delete</a>
+            <a href='#' onClick={onDelete}>Delete</a>
           </td>
         </tr>
       )
     }
     const newAssignmentUrl = `/edit/classes/${props.classView.uuid}/assignments/new?categoryUuid=${category.uuid}`
+    const reorderUrl = `/edit/classes/${props.classView.uuid}/categories/${category.uuid}/assignment_order`
     categories.push(
       <React.Fragment key={category.uuid}>
         <tr>
@@ -54,6 +81,8 @@ export default function ClassEdit(rawProps: ClassViewProps | {error: number}) {
           <td>
             <a href={newAssignmentUrl}>New Assignment</a>
             <span> </span>
+            <a href={reorderUrl}>Reorder Assignments</a>
+            <span> </span>
             <a href='#'>Delete Category</a>
           </td>
         </tr>
@@ -65,6 +94,7 @@ export default function ClassEdit(rawProps: ClassViewProps | {error: number}) {
   return (
     <div>
       <TopBar user={props.user}/>
+      <h3>{status}</h3>
       <h1>{`Class: ${props.classView.name}`}</h1>
       <h2>{`Professor: ${props.classView.professor_name}`}</h2>
       <table className={mainTable.MainTable}>
@@ -74,4 +104,8 @@ export default function ClassEdit(rawProps: ClassViewProps | {error: number}) {
       </table>
     </div>
   )
+}
+
+export default function Main(props: ClassViewProps | HtmlError) {
+  return <ErrorHandler dispatch={ClassEdit} props={props}/>
 }

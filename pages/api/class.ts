@@ -3,7 +3,7 @@ import {LoginResponse} from "./login";
 import {connectToDB} from "../../lib/server/db";
 import {jsonTransactionWithUser} from "../../lib/server/util";
 import {DbClass, DbGradeEntry, withFindClassJson} from "../../lib/server/class";
-import {EditAssignment, SingleGradeEntry, UserType} from "../../lib/common/types";
+import {Assignment, EditAssignment, SingleGradeEntry, UserType} from "../../lib/common/types";
 import {v4 as uuidv4} from "uuid";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse<LoginResponse>) {
@@ -25,12 +25,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       const dbGrades = db.collection<DbGradeEntry>('grade_entry')
 
       switch (req.body.command) {
-        case 'create_assignment':
+        case 'create_assignment': {
           if (typeof req.body.name !== 'string') {
             return {
               statusCode: 400,
               body: {
-                status: 'Bad assignment uuid'
+                status: 'Bad assignment name'
               }
             }
           }
@@ -40,7 +40,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
             return {
               statusCode: 400,
               body: {
-                status: 'Bad assignment uuid'
+                status: 'Bad assignment category'
               }
             }
           }
@@ -50,7 +50,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
             return {
               statusCode: 400,
               body: {
-                status: 'Bad assignment uuid'
+                status: 'Bad max points'
               }
             }
           }
@@ -83,7 +83,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
               uuid
             }
           }
-        case 'delete_assignment':
+        }
+        case 'delete_assignment': {
           if (typeof req.body.assignmentUuid !== 'string') {
             return {
               statusCode: 400,
@@ -116,7 +117,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
               status: 'Assignment deleted'
             }
           }
-        case 'edit_assignment':
+        }
+        case 'edit_assignment': {
           const validAssignment = typeof req.body.assignment === 'object' &&
             typeof req.body.assignment.name === 'string' &&
             typeof req.body.assignment.uuid === 'string' &&
@@ -164,11 +166,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
 
           const grades: SingleGradeEntry[] = req.body.grades
 
-          const assignmentPresent =
-            dbClass.category.some(
-              category => category.assignments.some(a => a.uuid === assignment.uuid))
+          const fromCategory =
+            dbClass.category.find(category => category.assignments.some(a => a.uuid === assignment.uuid))
 
-          if (!assignmentPresent) {
+          if (!fromCategory) {
             return {
               statusCode: 404,
               body: {
@@ -177,7 +178,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
             }
           }
 
-          if (!dbClass.category.some(c => c.uuid === assignment.categoryUuid)) {
+          const toCategory = dbClass.category.find(c => c.uuid === assignment.categoryUuid)
+
+          if (!toCategory) {
             return {
               statusCode: 404,
               body: {
@@ -186,19 +189,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
             }
           }
 
-          for (const category of dbClass.category) {
-            category.assignments = category.assignments.filter(a => a.uuid !== assignment.uuid)
-          }
+          if (fromCategory === toCategory) {
+            const dbAssignment = toCategory.assignments.find(a => a.uuid === assignment.uuid)!
+            dbAssignment.name = assignment.name
+            dbAssignment.max_points = assignment.max_points
+          } else {
+            fromCategory.assignments = fromCategory.assignments.filter(a => a.uuid !== assignment.uuid)
 
-          for (const category of dbClass.category) {
-            if (category.uuid === assignment.categoryUuid) {
-              category.assignments.push({
-                max_points: assignment.max_points,
-                name: assignment.name,
-                uuid: assignment.uuid
-              })
-              break
-            }
+            toCategory.assignments.push({
+              max_points: assignment.max_points,
+              name: assignment.name,
+              uuid: assignment.uuid
+            })
           }
 
           for (const grade of grades) {
@@ -213,7 +215,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
           }
 
           for (const grade of grades) {
-            let dbGradeEntry = await dbGrades.findOne({class_uuid: dbClass.uuid, student_uuid: grade.studentUuid}, {session})
+            let dbGradeEntry = await dbGrades.findOne({
+              class_uuid: dbClass.uuid,
+              student_uuid: grade.studentUuid
+            }, {session})
             if (!dbGradeEntry) {
               dbGradeEntry = {
                 class_uuid: dbClass.uuid,
@@ -229,7 +234,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
               })
             }
 
-            await dbGrades.replaceOne({student_uuid: grade.studentUuid, class_uuid: dbClass.uuid}, dbGradeEntry, {session, upsert: true})
+            await dbGrades.replaceOne({
+              student_uuid: grade.studentUuid,
+              class_uuid: dbClass.uuid
+            }, dbGradeEntry, {session, upsert: true})
           }
 
           await classes.replaceOne({uuid: dbClass.uuid}, dbClass, {session})
@@ -239,6 +247,103 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
               status: 'Grades updated'
             }
           }
+        }
+        case 'reorder_assignments': {
+          if (typeof req.body.categoryUuid !== 'string') {
+            return {
+              statusCode: 400,
+              body: {
+                status: 'Bad category uuid'
+              }
+            }
+          }
+          const categoryUuid: string = req.body.categoryUuid
+
+          const category = dbClass.category.find(c => c.uuid === categoryUuid)
+          if (!category) {
+            return {
+              statusCode: 404,
+              body: {
+                status: 'Category not found'
+              }
+            }
+          }
+
+          if (!Array.isArray(req.body.assignmentUuids)) {
+            return {
+              statusCode: 400,
+              body: {
+                status: 'Bad assignment uuids'
+              }
+            }
+          }
+
+          for (let uuid of req.body.assignmentUuids) {
+            if (typeof uuid !== 'string') {
+              return {
+                statusCode: 400,
+                body: {
+                  status: 'Bad assignment uuids'
+                }
+              }
+            }
+          }
+
+          const assignmentUuids: string[] = req.body.assignmentUuids
+
+          if (category.assignments.length !== assignmentUuids.length) {
+            return {
+              statusCode: 400,
+              body: {
+                status: 'Assignment lengths do not match'
+              }
+            }
+          }
+
+          const uuidToAssignment = new Map<string, Assignment>()
+
+          for (let assignment of category.assignments) {
+            uuidToAssignment.set(assignment.uuid, assignment)
+          }
+
+          const sortedUuids = assignmentUuids.concat()
+          sortedUuids.sort()
+          for (let i = 0; i < sortedUuids.length - 1; i++) {
+            if (sortedUuids[i] === sortedUuids[i + 1]) {
+              return {
+                statusCode: 400,
+                body: {
+                  status: 'Duplicate assignment uuids'
+                }
+              }
+            }
+          }
+
+          const newAssignmentList = []
+          for (let uuid of assignmentUuids) {
+            const assignment = uuidToAssignment.get(uuid)
+            if (!assignment) {
+              return {
+                statusCode: 400,
+                body: {
+                  status: 'Unknown assignment'
+                }
+              }
+            }
+            newAssignmentList.push(assignment)
+          }
+
+          category.assignments = newAssignmentList
+
+          await classes.replaceOne({uuid: dbClass.uuid}, dbClass, {session})
+
+          return {
+            statusCode: 200,
+            body: {
+              status: 'Assignments reordered'
+            }
+          }
+        }
       }
       return {
         statusCode: 400,

@@ -83,3 +83,8 @@ export interface ClassOverview {
   grade: Fraction
 }
 
+export interface CategoryViewProps {
+  category: ClassCategory,
+  classUuid: string
+  user: ClientUser
+}

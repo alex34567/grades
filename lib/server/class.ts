@@ -467,6 +467,36 @@ export async function genNewAssignmentView(context: GetServerSidePropsContext) {
   })
 }
 
+export async function genCategoryView(context: GetServerSidePropsContext) {
+  const client = await connectToDB()
+
+  return await htmlTransactionWithUser(client, context, async (session, thisUser) => {
+    return await withFindClassHtml(client, session, context.query, async (dbClass) => {
+      if (thisUser.type !== UserType.admin && dbClass.professor_uuid !== thisUser.uuid) {
+        return {
+          props: {error: 403}
+        }
+      }
+
+      const category = dbClass.category.find(c => c.uuid === context.query.categoryUuid)
+
+      if (!category) {
+        return {
+          props: {error: 404}
+        }
+      }
+
+      return {
+        props: {
+          category,
+          classUuid: dbClass.uuid,
+          user: thisUser
+        }
+      }
+    })
+  })
+}
+
 export interface FindClassInputJson {
   classUuid?: string,
 }

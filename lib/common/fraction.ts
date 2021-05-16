@@ -15,8 +15,8 @@ export function fractionToPercent(frac: Fraction): string {
     if (fracValue < 10) {
       ret += '0';
     }
-    if (fracValue === 10) {
-      ret += '1';
+    if (fracValue % 10 === 0) {
+      ret += String(fracValue / 10);
     } else {
       ret += String(fracValue);
     }

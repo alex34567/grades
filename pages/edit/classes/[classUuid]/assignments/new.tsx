@@ -8,6 +8,7 @@ import Box from '../../../../../styles/InputBox.module.css'
 import {useRouter} from "next/router";
 import {stringToMillipoint} from "../../../../../lib/common/fraction";
 import {sendApiPostRequest} from "../../../../../lib/client/util";
+import Link from "next/link";
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
   return await genNewAssignmentView(context)
@@ -97,6 +98,7 @@ export default function NewAssignment(rawProps: NewAssignmentProps | {error: num
   return (
     <div>
       <TopBar user={props.user}/>
+      <Link href={`/edit/classes/${props.classUuid}`}>Back</Link>
       <h1>New Assignment</h1>
       <br/>
       <h3>{status}</h3>
