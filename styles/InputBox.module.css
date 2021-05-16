@@ -1,0 +1,7 @@
+.Box {
+    border: black 1px solid;
+}
+
+.Error {
+    border: red 1px solid;
+}

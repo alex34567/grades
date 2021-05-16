@@ -6,31 +6,64 @@ export interface Fraction {
 export interface ClientClass {
   uuid: string,
   name: string,
-  student_name: string,
   professor_name: string,
-  grade: Fraction,
-  categories: ClientClassCategory[],
+  categories: ClassCategory[],
 }
 
-export interface ClientClassCategory {
+export interface ClientStudentClass extends ClientClass {
+  student_name: string,
+  grade: Fraction,
+  categories: ClientStudentClassCategory[],
+}
+
+export interface ClassCategory {
   name: string,
   uuid: string,
-  grade: Fraction,
-  weighted_grade: Fraction,
-  assignments: ClientAssignment[],
+  weight: number,
+  assignments: Assignment[],
 }
 
-export interface ClientAssignment {
+export interface ClientStudentClassCategory extends ClassCategory {
+  grade: Fraction,
+  weighted_grade: Fraction,
+  assignments: ClientStudentAssignment[],
+}
+
+export interface Assignment {
   name: string,
   uuid: string,
+  max_points: number
+}
+
+export interface EditAssignment {
+  name: string,
+  uuid: string,
+  categoryUuid: string,
+  max_points: number
+}
+
+export interface SingleGradeEntry {
+  studentUuid: string,
+  grade: number | null
+}
+
+export interface ClientGradeEntry extends SingleGradeEntry{
+  studentName: string
+}
+
+export interface ClientStudentAssignment extends Assignment {
   grade: Fraction,
   weighted_grade: Fraction,
 }
 
-export interface ClientUser {
+export interface UserInfo {
+  login_name: string
   name: string,
   type: UserType
   uuid: string
+}
+
+export interface ClientUser extends UserInfo{
   csrf: string
   error?: undefined
 }
@@ -40,6 +73,8 @@ export enum UserType {
   professor,
   student,
 }
+
+export const USER_TYPES = [UserType.admin, UserType.professor, UserType.student]
 
 export interface ClassOverview {
   class_uuid: string

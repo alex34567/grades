@@ -1,5 +1,5 @@
 import styles from '../../styles/StudentLanding.module.css'
-import bTable from '../../styles/BoarderedTable.module.css'
+import MainTable from '../../styles/MainTable.module.css'
 import {fractionToLetterGrade, fractionToPercent, fractionToString} from '../../lib/common/fraction'
 import Link from 'next/link'
 import TopBar from "../../lib/client/TopBar";
@@ -49,7 +49,7 @@ export default function StudentPage(rawProps: StudentPageProps | {error: number}
     <div>
       <TopBar user={props.user}/>
       <h1>{`Student Name: ${props.studentName}`}</h1>
-      <table className={styles.ClassList + ' ' + bTable.BTable}>
+      <table className={MainTable.MainTable}>
         <colgroup>
           <col className={styles.ClassName} span={1}/>
           <col className={styles.ProfName} span={1}/>

@@ -1,12 +1,13 @@
-.BTable {
+.MainTable {
     border-collapse: collapse;
+    width: 80vw;
     margin-left: 16px;
 }
 
-.BTable th {
+.MainTable th {
     border: 1px solid;
 }
 
-.BTable td {
+.MainTable td {
     border: 1px solid;
 }

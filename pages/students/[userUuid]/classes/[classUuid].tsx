@@ -1,7 +1,6 @@
-import bTable from '../../../../styles/BoarderedTable.module.css'
-import styles from '../../../../styles/StudentClassView.module.css'
+import MainTable from '../../../../styles/MainTable.module.css'
 import {GetServerSideProps} from 'next'
-import {ClientClass, ClientUser} from '../../../../lib/common/types'
+import {ClientStudentClass, ClientUser} from '../../../../lib/common/types'
 import {fractionToLetterGrade, fractionToPercent, fractionToString} from '../../../../lib/common/fraction';
 import React from 'react'
 import {genStudentClassView} from "../../../../lib/server/class";
@@ -13,7 +12,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
 }
 
 export interface ClassViewProps {
-  classView: ClientClass
+  classView: ClientStudentClass
   user: ClientUser
 }
 
@@ -70,7 +69,7 @@ export default function ClassView(rawProps: ClassViewProps | {error: number}) {
       <h2>{`Student: ${props.classView.student_name}`}</h2>
       <h2>{`Professor: ${props.classView.professor_name}`}</h2>
       <h3>{`Grade: ${fractionToLetterGrade(props.classView.grade)} (${fractionToPercent(props.classView.grade)})`}</h3>
-      <table className={styles.AssignmentTable + ' ' + bTable.BTable}>
+      <table className={MainTable.MainTable}>
         <tbody>
           {categories}
         </tbody>

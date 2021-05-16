@@ -1,12 +1,13 @@
-import {ClientSession, MongoClient} from 'mongodb'
+import {MongoClient, ClientSession as MongoSession} from 'mongodb'
 import {v4 as uuidv4} from 'uuid'
 import * as crypto from 'crypto'
 import {promisify} from 'util'
 import {NextApiRequest, NextApiResponse} from 'next'
-import {ClientUser, UserType} from "../common/types";
+import {ClientUser, UserInfo, UserType} from "../common/types";
 import {IncomingMessage} from "http";
 import {NextApiRequestCookies} from "next/dist/next-server/server/api-utils";
-import {ClientSession as MongoSession} from 'mongodb'
+import {JsonTransactionRet} from "./util";
+import {DbClass, deleteClass, dropStudent} from "./class";
 
 const randomBytes = promisify(crypto.randomBytes)
 const scrypt = promisify<crypto.BinaryLike, crypto.BinaryLike, number, Buffer>(crypto.scrypt)
@@ -75,6 +76,33 @@ export async function createUser(client: MongoClient, session: MongoSession, log
   return new User(db_user)
 }
 
+export async function deleteUser(client: MongoClient, session: MongoSession, user: UserInfo): Promise<void> {
+  const db = client.db()
+  const users = db.collection<DbUser>('users')
+  const classes = db.collection<DbClass>('class')
+  const sessions = db.collection<Session>('sessions')
+
+  await users.deleteOne({uuid: user.uuid}, {session})
+  await sessions.deleteMany({user_uuid: user.uuid}, {session})
+
+  const classCursor = classes.find({$or: [{
+    professor_uuid: user.uuid
+  }, {
+    students: user.uuid
+  }]}, {session})
+  try {
+    for await (const dbClass of classCursor) {
+      if (dbClass.professor_uuid === user.uuid) {
+        await deleteClass(client, session, dbClass)
+      } else {
+        await dropStudent(client, session, user, dbClass)
+      }
+    }
+  } finally {
+    await classCursor.close()
+  }
+}
+
 function sessionSetCookie(session: Session): string {
   const production = process.env.NODE_ENV === 'production'
   let secure_string = ''
@@ -101,7 +129,7 @@ function sessionDeleteCookie() {
   return `${cookie_name}=x; ${secure_string}HttpOnly; Path=/; SameSite=Lax; Expires=${new Date(0).toUTCString()}; Max-Age=0`
 }
 
-export async function logout(client: MongoClient, session: ClientSession, req: NextApiRequest) {
+export async function logout(client: MongoClient, session: MongoSession, req: NextApiRequest) {
   const db = client.db()
   const rawClassSession = await getSession(client, session, req)
   const classSession = rawClassSession.data
@@ -194,7 +222,7 @@ export async function login(client: MongoClient, session: MongoSession, req: Nex
   return [cookie]
 }
 
-async function getSession(client: MongoClient, session: ClientSession, req: IncomingMessage & { cookies: NextApiRequestCookies }): Promise<WithCookies<Session | undefined>> {
+async function getSession(client: MongoClient, session: MongoSession, req: IncomingMessage & { cookies: NextApiRequestCookies }): Promise<WithCookies<Session | undefined>> {
   let cookie_name = 'session'
   if (process.env.NODE_ENV === 'production') {
     cookie_name = '__Secure-session'
@@ -248,7 +276,7 @@ export function sessionErrorToHttpStatus(error: SessionError): number {
   }
 }
 
-export async function userFromSessionNoValidate(client: MongoClient, session: ClientSession, req: IncomingMessage & { cookies: NextApiRequestCookies }): Promise<WithCookies<ClientUser | { error: SessionError }>> {
+export async function userFromSessionNoValidate(client: MongoClient, session: MongoSession, req: IncomingMessage & { cookies: NextApiRequestCookies }): Promise<WithCookies<ClientUser | { error: SessionError }>> {
   const rawClassSession = await getSession(client, session, req)
   let cookies = rawClassSession.cookies
   const classSession = rawClassSession.data
@@ -325,6 +353,7 @@ export async function userFromSessionNoValidate(client: MongoClient, session: Cl
     cookies,
     data: {
       name: db_user.name,
+      login_name: db_user.login_name,
       uuid: db_user.uuid,
       type: db_user.type,
       csrf: classSession.csrf.toString('base64'),
@@ -332,7 +361,7 @@ export async function userFromSessionNoValidate(client: MongoClient, session: Cl
   }
 }
 
-export async function userFromSession(client: MongoClient, session: ClientSession, req: IncomingMessage & { cookies: NextApiRequestCookies }): Promise<WithCookies<ClientUser | { error: SessionError }>> {
+export async function userFromSession(client: MongoClient, session: MongoSession, req: IncomingMessage & { cookies: NextApiRequestCookies }): Promise<WithCookies<ClientUser | { error: SessionError }>> {
   const rawUser = await userFromSessionNoValidate(client, session, req)
   const user = rawUser.data
   if (typeof user.error !== 'undefined') {
@@ -350,3 +379,85 @@ export async function userFromSession(client: MongoClient, session: ClientSessio
   }
   return rawUser
 }
+
+export interface FindUserInputJson {
+  userUuid?: string,
+  userName?: string,
+}
+
+export interface FindUserInputHtml {
+  userUuid?: string | string[],
+}
+
+type FindUserFunc<T> = (user: UserInfo) => Promise<T>
+type FindUserHtmlRet<T> = T | {props: {error: number}}
+type FindUserJsonRet<T> = T | JsonTransactionRet<{ status: string }>
+
+export async function withFindUserHtml<T>(client: MongoClient, session: MongoSession, input: FindUserInputHtml, fn: FindUserFunc<T>): Promise<FindUserHtmlRet<T>> {
+  const db = client.db()
+  const users = db.collection<DbUser>('users')
+  const notFoundError = {
+    props: {
+      error: 404
+    }
+  }
+
+  let userUuid
+  if (input.userUuid) {
+    if (Array.isArray(input.userUuid)) {
+      userUuid = input.userUuid[0]
+    } else {
+      userUuid = input.userUuid
+    }
+  }
+
+  if (typeof userUuid === 'string') {
+    const user: UserInfo | null = await users.findOne({uuid: userUuid}, {session, projection: {password: 0, salt: 0}})
+    if (!user) {
+      return notFoundError
+    }
+    return await fn(user)
+  }
+
+  return {
+    props: {
+      error: 400
+    }
+  }
+}
+
+export async function withFindUserJson<T>(client: MongoClient, session: MongoSession, input: FindUserInputJson, fn: FindUserFunc<T>): Promise<FindUserJsonRet<T>> {
+  const db = client.db()
+  const users = db.collection<DbUser>('users')
+  const notFoundError = {
+      statusCode: 404,
+      body: {
+        status: 'User not found'
+      }
+  }
+
+  if (typeof input.userUuid === 'string') {
+    const user: UserInfo | null = await users.findOne({uuid: input.userUuid}, {session, projection: {password: 0, salt: 0}})
+    if (!user) {
+      return notFoundError
+    }
+    return await fn(user)
+  }
+
+  if (typeof input.userName === 'string') {
+    const user: UserInfo | null = await users.findOne({login_name: input.userName}, {session, projection: {password: 0, salt: 0}})
+    if (!user) {
+      return notFoundError
+    }
+    return await fn(user)
+  }
+
+  return {
+    statusCode: 400,
+    body: {
+      status: 'User name or uuid not in request'
+    }
+  }
+}
+
+

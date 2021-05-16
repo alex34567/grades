@@ -27,18 +27,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     const logged_in = Boolean(user)
 
     if (req.method === 'GET' || req.method === 'HEAD') {
-      if (req.method === 'GET') {
-        let status = 'Logged Out'
-        if (logged_in) {
-          status = 'Logged In'
-        }
-        return {
-          cookies,
-          statusCode: 200,
-          body: {
-            status,
-            logged_in,
-          }
+      let status = 'Logged Out'
+      if (logged_in) {
+        status = 'Logged In'
+      }
+      return {
+        cookies,
+        statusCode: 200,
+        body: {
+          status,
+          logged_in,
         }
       }
     } else if (req.method === 'POST') {
@@ -233,6 +231,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
         }
       }
     }
+  }
+
+  const allowedMethods = ['GET', 'HEAD', 'POST']
+
+  if (!allowedMethods.includes(req.method!)) {
+    res.status(405)
+    res.setHeader('Allow', allowedMethods.join(', '))
+    res.json({
+      status: 'Invalid Method',
+      logged_in: false
+    })
+    return
   }
 
   let rawRet: { cookies: string[]; statusCode: number; body: { status: string; logged_in: boolean } } | undefined

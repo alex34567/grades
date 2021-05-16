@@ -1,12 +1,12 @@
 import {connectToDB} from '../lib/server/db'
 import clearCache from './clear_cache'
-import {MongoClient} from 'mongodb'
+import {MongoClient, ClientSession as MongoSession} from 'mongodb'
 
-export default async function initDb(client: MongoClient) {
-  await clearCache(client)
+export default async function initDb(client: MongoClient, session: MongoSession) {
+  await clearCache(client, session)
   const db = client.db()
 
-  const users = await db.collection('users')
+  const users = db.collection('users')
   await users.createIndexes([{
     key: {
       login_name: 1,
@@ -19,7 +19,7 @@ export default async function initDb(client: MongoClient) {
     },
     name: 'uuid',
     unique: true,
-  }])
+  }], {session})
 
   const sessions = await db.collection('sessions')
   await sessions.createIndexes([{
@@ -39,7 +39,7 @@ export default async function initDb(client: MongoClient) {
     },
     name: 'expires',
     expireAfterSeconds: 0,
-  }])
+  }], {session})
 
   const classes = await db.collection('class')
   await classes.createIndexes([{
@@ -58,7 +58,7 @@ export default async function initDb(client: MongoClient) {
       students: 1,
     },
     name: 'students',
-  }])
+  }], {session})
 
   const grade_entry = await db.collection('grade_entry')
   await grade_entry.createIndexes([{
@@ -84,14 +84,16 @@ export default async function initDb(client: MongoClient) {
       class_uuid: 1,
     },
     name: 'class'
-  }])
+  }], {session})
 }
 
 async function main() {
   const client = await connectToDB()
+  const session = client.startSession()
   try {
-    await initDb(client)
+    await initDb(client, session)
   } finally {
+    await session.endSession()
     await client.close()
   }
 }
