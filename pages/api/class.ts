@@ -221,14 +221,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
                 assignments: []
               }
             }
+            dbGradeEntry.assignments = dbGradeEntry.assignments.filter(a => a.assignment_uuid !== assignment.uuid)
             if (grade.grade) {
-              for (const dbGradeAssignment of dbGradeEntry.assignments) {
-                if (dbGradeAssignment.assignment_uuid === assignment.uuid) {
-                  dbGradeAssignment.grade = grade.grade
-                }
-              }
-            } else {
-              dbGradeEntry.assignments = dbGradeEntry.assignments.filter(a => a.assignment_uuid !== assignment.uuid)
+              dbGradeEntry.assignments.push({
+                assignment_uuid: assignment.uuid,
+                grade: grade.grade
+              })
             }
 
             await dbGrades.replaceOne({student_uuid: grade.studentUuid, class_uuid: dbClass.uuid}, dbGradeEntry, {session, upsert: true})
