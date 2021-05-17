@@ -45,7 +45,7 @@ export function CategoryNew(props: CategoryNewProps) {
         name: name,
         weight: stringToMillipoint(weight)
       })
-      await router.push(`/edit/classes/${props.classUuid}`)
+      await router.push(`/classes/${props.classUuid}/edit`)
     } catch (e) {
       setStatus(e.toString())
       setUpdating(false)
@@ -69,7 +69,7 @@ export function CategoryNew(props: CategoryNewProps) {
   return(
     <div>
       <TopBar user={props.user}/>
-      <Link href={`/edit/classes/${props.classUuid}`}>Back</Link>
+      <Link href={`/classes/${props.classUuid}/edit`}>Back</Link>
       <br/>
       <h3>{status}</h3>
       <label>Category Name: </label>

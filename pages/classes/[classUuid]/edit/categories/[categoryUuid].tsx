@@ -55,7 +55,7 @@ export function CategoryMetaEdit (props: CategoryViewProps) {
         classUuid: props.classUuid,
         categoryUuid: props.category.uuid
       })
-      await router.push(`/edit/classes/${props.classUuid}`)
+      await router.push(`/classes/${props.classUuid}/edit`)
     } catch (e) {
       setStatus(e.toString())
       setUpdating(false)
@@ -103,7 +103,7 @@ export function CategoryMetaEdit (props: CategoryViewProps) {
   return (
     <div>
       <TopBar user={props.user}/>
-      <Link href={`/edit/classes/${props.classUuid}`}>Back</Link>
+      <Link href={`/classes/${props.classUuid}/edit`}>Back</Link>
       <br/>
       <h3>{status}</h3>
       <label>Category Name: </label>

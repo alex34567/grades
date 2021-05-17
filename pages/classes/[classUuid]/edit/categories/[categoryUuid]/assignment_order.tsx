@@ -88,7 +88,7 @@ export function ReorderAssignments (props: CategoryViewProps) {
   return (
     <div>
       <TopBar user={props.user}/>
-      <Link href={`/edit/classes/${props.classUuid}`}>Back</Link>
+      <Link href={`/classes/${props.classUuid}/edit`}>Back</Link>
       <h3>{status}</h3>
       <table className={MainTable.MainTable}>
         <thead>

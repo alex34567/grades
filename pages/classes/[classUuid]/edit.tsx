@@ -53,7 +53,7 @@ export function ClassEdit(props: ClassViewProps) {
         }
       }
 
-      const assignmentEditUrl = `/edit/classes/${props.classView.uuid}/assignments/${assignment.uuid}`
+      const assignmentEditUrl = `/classes/${props.classView.uuid}/edit/assignments/${assignment.uuid}`
       assignments.push(
         <tr key={assignment.uuid}>
           <td><Link href={assignmentEditUrl}>{assignment.name}</Link></td>
@@ -66,9 +66,9 @@ export function ClassEdit(props: ClassViewProps) {
         </tr>
       )
     }
-    const newAssignmentUrl = `/edit/classes/${props.classView.uuid}/assignments/new?categoryUuid=${category.uuid}`
-    const reorderUrl = `/edit/classes/${props.classView.uuid}/categories/${category.uuid}/assignment_order`
-    const editCategoryUrl = `/edit/classes/${props.classView.uuid}/categories/${category.uuid}`
+    const newAssignmentUrl = `/classes/${props.classView.uuid}/edit/assignments/new?categoryUuid=${category.uuid}`
+    const reorderUrl = `/classes/${props.classView.uuid}/edit/categories/${category.uuid}/assignment_order`
+    const editCategoryUrl = `/classes/${props.classView.uuid}/edit/categories/${category.uuid}`
     categories.push(
       <React.Fragment key={category.uuid}>
         <tr>
@@ -98,7 +98,7 @@ export function ClassEdit(props: ClassViewProps) {
       <h3>{status}</h3>
       <h1>{`Class: ${props.classView.name}`}</h1>
       <h2>{`Professor: ${props.classView.professor_name}`}</h2>
-      <Link href={`/edit/classes/${props.classView.uuid}/categories/new`}>New Category</Link>
+      <Link href={`/classes/${props.classView.uuid}/edit/categories/new`}>New Category</Link>
       <table className={mainTable.MainTable}>
         <tbody>
         {categories}

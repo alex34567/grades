@@ -76,7 +76,7 @@ export default function NewAssignment(rawProps: NewAssignmentProps | {error: num
         maxPoints: stringToMillipoint(maxPoints)!
       })
 
-      await router.push(`/edit/classes/${props.classUuid}/assignments/${res.uuid}`)
+      await router.push(`/classes/${props.classUuid}/edit/assignments/${res.uuid}`)
     } catch (e) {
       setCreating(false)
       setStatus(e.toString())
@@ -98,7 +98,7 @@ export default function NewAssignment(rawProps: NewAssignmentProps | {error: num
   return (
     <div>
       <TopBar user={props.user}/>
-      <Link href={`/edit/classes/${props.classUuid}`}>Back</Link>
+      <Link href={`/classes/${props.classUuid}/edit`}>Back</Link>
       <h1>New Assignment</h1>
       <h3>{status}</h3>
       <label>Name: </label>

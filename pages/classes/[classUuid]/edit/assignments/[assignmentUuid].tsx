@@ -104,7 +104,7 @@ export default function ModifyAssignment(rawProps: EditAssignmentProps | {error:
         assignmentUuid: props.assignment.uuid
       })
 
-      await router.push(`/edit/classes/${props.classUuid}`)
+      await router.push(`/classes/${props.classUuid}/edit`)
     } catch (e) {
       setStatus(e.toString())
       setUpdating(false)
@@ -199,7 +199,7 @@ export default function ModifyAssignment(rawProps: EditAssignmentProps | {error:
   return (
     <div>
       <TopBar user={props.user}/>
-      <Link href={`/edit/classes/${props.classUuid}`}>Back</Link>
+      <Link href={`/classes/${props.classUuid}/edit`}>Back</Link>
       <br/>
       <h3>{status}</h3>
       <br/>
