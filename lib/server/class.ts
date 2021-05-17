@@ -89,7 +89,7 @@ function calcGrade(dbClass: DbClass, gradeEntry?: DbGradeEntry | null): Fraction
     let categoryTotal = 0n
     for (const assignment of category.assignments) {
       let grade = assignmentToGrade.get(assignment.uuid)
-      if (!grade) {
+      if (typeof grade !== 'number') {
         continue
       }
       categoryTotal += BigInt(assignment.max_points)
@@ -243,7 +243,7 @@ export async function genStudentClassView(context: GetServerSidePropsContext) {
             let grade = null
             let weighted_grade = null
             const rawGrade = assignmentToGrade.get(assignment.uuid)
-            if (rawGrade) {
+            if (typeof rawGrade === 'number') {
               const gradeVal = BigInt(rawGrade)
               categoryPoints += gradeVal
               const proportionOfWeight = BigInt(category.weight) * gradeVal / categoryTotal
