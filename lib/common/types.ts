@@ -12,7 +12,7 @@ export interface ClientClass {
 
 export interface ClientStudentClass extends ClientClass {
   student_name: string,
-  grade: Fraction,
+  grade: Fraction | null,
   categories: ClientStudentClassCategory[],
 }
 
@@ -27,8 +27,8 @@ export interface ClassCategory extends CategoryMeta {
 }
 
 export interface ClientStudentClassCategory extends ClassCategory {
-  grade: Fraction,
-  weighted_grade: Fraction,
+  grade: Fraction | null,
+  weighted_grade: Fraction | null,
   assignments: ClientStudentAssignment[],
 }
 
@@ -50,13 +50,14 @@ export interface SingleGradeEntry {
   grade: number | null
 }
 
-export interface ClientGradeEntry extends SingleGradeEntry{
+export interface ClientGradeEntry extends SingleGradeEntry {
   studentName: string
 }
 
 export interface ClientStudentAssignment extends Assignment {
-  grade: Fraction,
-  weighted_grade: Fraction,
+  grade: Fraction | null,
+  max_points: number,
+  weighted_grade: Fraction | null,
 }
 
 export interface UserInfo {

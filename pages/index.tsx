@@ -3,9 +3,10 @@ import TopBar from "../lib/client/TopBar";
 import {GetServerSideProps} from "next";
 import {connectToDB} from "../lib/server/db";
 import {ClientUser, UserType} from "../lib/common/types";
-import {genStudentClassOverview} from "../lib/server/class";
+import {genStudentClassOverview, getClassList} from "../lib/server/class";
 import StudentPage from "./students/[userUuid]";
 import {htmlTransactionWithUser} from "../lib/server/util";
+import ProfessorClassList from "../lib/client/ProfessorClassList";
 
 interface IndexProps {
   type: HomepageTypes
@@ -14,7 +15,8 @@ interface IndexProps {
 
 enum HomepageTypes {
   loggedOut,
-  student
+  student,
+  professor
 }
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
@@ -27,6 +29,16 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         props: {
           type: HomepageTypes.student,
           props: studentProps.props
+        }
+      }
+    }
+
+    if (user.type === UserType.professor) {
+      const professorProps = await getClassList(client, session, user)
+      return {
+        props: {
+          type: HomepageTypes.professor,
+          props: professorProps.props
         }
       }
     }
@@ -64,6 +76,9 @@ export default function Index(props: IndexProps) {
       break
     case HomepageTypes.student:
       Component = StudentPage
+      break
+    case HomepageTypes.professor:
+      Component = ProfessorClassList
       break
   }
   return <Component {...props.props}/>

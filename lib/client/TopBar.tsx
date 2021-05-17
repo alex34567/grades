@@ -26,10 +26,6 @@ export default function TopBar(props: {user: ClientUser | null}) {
     )
   }
 
-  let classLink
-  if (props.user) {
-    classLink = <Link href='/'><a>Classes</a></Link>
-  }
   let changePassword
   if (props.user) {
     changePassword = <Link href='/change_password'><a href='/change_password'>Change Password</a></Link>
@@ -38,7 +34,8 @@ export default function TopBar(props: {user: ClientUser | null}) {
   return (
     <div className={styles.TopBar}>
       <div className={styles.Home}>
-        {classLink}
+        <Link href='/'>Home</Link>
+        <span> </span>
         <span> </span>
         {changePassword}
       </div>

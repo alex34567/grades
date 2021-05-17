@@ -1,5 +1,5 @@
 import {GetServerSideProps} from "next";
-import {genProfessorClassView} from "../../../lib/server/class";
+import {genProfessorClassEditView} from "../../../lib/server/class";
 import {ClientClass, ClientUser} from "../../../lib/common/types";
 import React, {useState} from "react";
 import TopBar from "../../../lib/client/TopBar";
@@ -11,7 +11,7 @@ import {useRouter} from "next/router";
 import ErrorHandler, {HtmlError} from "../../../lib/client/ErrorHandler";
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
-  return (await genProfessorClassView(context))!
+  return (await genProfessorClassEditView(context))!
 }
 
 export interface ClassViewProps {
@@ -98,6 +98,8 @@ export function ClassEdit(props: ClassViewProps) {
       <h3>{status}</h3>
       <h1>{`Class: ${props.classView.name}`}</h1>
       <h2>{`Professor: ${props.classView.professor_name}`}</h2>
+      <Link href={`/classes/${props.classView.uuid}`}>Back</Link>
+      <span> </span>
       <Link href={`/classes/${props.classView.uuid}/edit/categories/new`}>New Category</Link>
       <span> </span>
       <Link href={`/classes/${props.classView.uuid}/edit/categories/category_order`}>Reorder Category</Link>

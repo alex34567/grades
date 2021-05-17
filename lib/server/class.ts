@@ -1,6 +1,6 @@
 import {MongoClient, ClientSession as MongoSession} from 'mongodb'
 import {DbUser, withFindUserHtml} from './user'
-import {ClassCategory, ClientUser, UserInfo, UserType} from "../common/types";
+import {ClassCategory, ClientUser, Fraction, UserInfo, UserType} from "../common/types";
 import {connectToDB} from "./db";
 import {GetServerSidePropsContext} from "next";
 import {htmlTransactionWithUser, JsonTransactionRet} from "./util";
@@ -72,6 +72,53 @@ export async function addStudent(client: MongoClient, session: MongoSession, dbC
   }})
 }
 
+function calcGrade(dbClass: DbClass, gradeEntry?: DbGradeEntry | null): Fraction {
+  let assignmentToGrade = new Map<string, number>()
+  if (gradeEntry) {
+    for (const assignment of gradeEntry.assignments) {
+      assignmentToGrade.set(assignment.assignment_uuid, assignment.grade)
+    }
+  }
+
+  let totalWeights = 0n
+  let numerator = 0n
+  let denominator = 1n
+  for (const category of dbClass.category) {
+    totalWeights += BigInt(category.weight)
+    let categoryPoints = 0n
+    let categoryTotal = 0n
+    for (const assignment of category.assignments) {
+      let grade = assignmentToGrade.get(assignment.uuid)
+      if (!grade) {
+        continue
+      }
+      categoryTotal += BigInt(assignment.max_points)
+      categoryPoints += BigInt(grade)
+    }
+    categoryPoints *= BigInt(category.weight)
+
+    // Prevent divides by zero
+    if (categoryTotal > 0) {
+      categoryPoints *= denominator
+      denominator *= categoryTotal
+      numerator *= categoryTotal
+      numerator += categoryPoints
+    }
+  }
+
+  let final_numerator = 0n
+  let final_denominator = 0n
+  if (denominator > 0) {
+    final_numerator = numerator / denominator
+    final_denominator = totalWeights
+  }
+
+  return {
+    n: Number(final_numerator),
+    d: Number(final_denominator)
+  }
+}
+
 export async function genStudentClassOverview(context: GetServerSidePropsContext, client: MongoClient, session: MongoSession, homepage: boolean, thisUser: ClientUser) {
   let studentUuid: string | undefined
   if (homepage) {
@@ -127,58 +174,15 @@ export async function genStudentClassOverview(context: GetServerSidePropsContext
 
     const classOverview = []
     for (const sClass of studentClasses.values()) {
-      let assignmentToGrade = new Map<string, number>()
-      if (sClass.grades) {
-        for (const assignment of sClass.grades.assignments) {
-          assignmentToGrade.set(assignment.assignment_uuid, assignment.grade)
-        }
-      }
-      let totalWeights = 0n
-      let numerator = 0n
-      let denominator = 1n
-      for (const category of sClass.dbClass.category) {
-        totalWeights += BigInt(category.weight)
-        let categoryPoints = 0n
-        let categoryTotal = 0n
-        for (const assignment of category.assignments) {
-          categoryTotal += BigInt(assignment.max_points)
-          let rawGrade = assignmentToGrade.get(assignment.uuid)
-          let grade
-          if (rawGrade) {
-            grade = BigInt(rawGrade)
-          } else {
-            grade = 0n
-          }
-          categoryPoints += grade
-        }
-        categoryPoints *= BigInt(category.weight)
-
-        // Prevent divides by zero
-        if (categoryTotal > 0) {
-          categoryPoints *= denominator
-          denominator *= categoryTotal
-          numerator *= categoryTotal
-          numerator += categoryPoints
-        }
-      }
+      const grade = calcGrade(sClass.dbClass, sClass.grades)
 
       const professor_name = (await users.findOne({uuid: sClass.dbClass.professor_uuid}, {projection: {name: 1}, session}))!.name
-
-      let final_numerator = 0n
-      let final_denominator = 1000n
-      if (denominator > 0) {
-        final_numerator = numerator / denominator
-        final_denominator = totalWeights
-      }
 
       classOverview.push({
         class_uuid: sClass.dbClass.uuid,
         professor_name,
         name: sClass.dbClass.name,
-        grade: {
-          n: Number(final_numerator),
-          d: Number(final_denominator),
-        }
+        grade
       })
     }
 
@@ -231,37 +235,44 @@ export async function genStudentClassView(context: GetServerSidePropsContext) {
           let categoryTotal = 0n
           const assignments = []
           for (const assignment of category.assignments) {
-            categoryTotal += BigInt(assignment.max_points)
+            if (assignmentToGrade.get(assignment.uuid)) {
+              categoryTotal += BigInt(assignment.max_points)
+            }
           }
           for (const assignment of category.assignments) {
+            let grade = null
+            let weighted_grade = null
             const rawGrade = assignmentToGrade.get(assignment.uuid)
-            let grade
             if (rawGrade) {
-              grade = BigInt(rawGrade)
-            } else {
-              grade = 0n
-            }
-            categoryPoints += grade
+              const gradeVal = BigInt(rawGrade)
+              categoryPoints += gradeVal
+              const proportionOfWeight = BigInt(category.weight) * gradeVal / categoryTotal
+              const maxProportionOfWeight = BigInt(category.weight) * BigInt(assignment.max_points) / categoryTotal
 
-            const proportionOfWeight = BigInt(category.weight) * grade / categoryTotal
-            const maxProportionOfWeight = BigInt(category.weight) * BigInt(assignment.max_points) / categoryTotal
+              grade = {
+                n: Number(gradeVal),
+                d: assignment.max_points
+              }
+              weighted_grade = {
+                n: Number(proportionOfWeight),
+                  d: Number(maxProportionOfWeight)
+              }
+            }
 
             assignments.push({
               name: assignment.name,
               uuid: assignment.uuid,
-              grade: {
-                n: Number(grade),
-                d: assignment.max_points
-              },
+              grade,
               max_points: assignment.max_points,
-              weighted_grade: {
-                n: Number(proportionOfWeight),
-                d: Number(maxProportionOfWeight)
-              }
+              weighted_grade
             })
+
           }
 
-          const proportionOfGrade = BigInt(category.weight) * categoryPoints / categoryTotal
+          let proportionOfGrade = 0n
+          if (categoryTotal > 0) {
+            proportionOfGrade = BigInt(category.weight) * categoryPoints / categoryTotal
+          }
 
           categories.push({
             name: category.name,
@@ -320,7 +331,7 @@ export async function genStudentClassView(context: GetServerSidePropsContext) {
   })
 }
 
-export async function genProfessorClassView(context: GetServerSidePropsContext) {
+export async function genProfessorClassEditView(context: GetServerSidePropsContext) {
   const client = await connectToDB()
 
   return await htmlTransactionWithUser(client, context, async (session, thisUser) => {
@@ -516,6 +527,74 @@ export async function genNewCategoryView(context: GetServerSidePropsContext) {
       }
     })
   })
+}
+
+export async function getProfessorClassOverview(context: GetServerSidePropsContext) {
+  const client = await connectToDB()
+
+  return await htmlTransactionWithUser(client, context, async (session, thisUser) => {
+    return await withFindClassHtml(client, session, context.query, async (dbClass) => {
+      if (thisUser.type !== UserType.admin && dbClass.professor_uuid !== thisUser.uuid) {
+        return {
+          props: {error: 403}
+        }
+      }
+
+      const db = client.db()
+      const grades = db.collection<DbGradeEntry>('grade_entry')
+      const users = db.collection<UserInfo>('users')
+
+      const studentGrades = []
+      for (const student of dbClass.students) {
+        const studentName = (await users.findOne({uuid: student}, {session, projection: {name: 1}}))!.name
+        const gradeEntry = await grades.findOne({class_uuid: dbClass.uuid, student_uuid: student}, {session})
+        let grade = calcGrade(dbClass, gradeEntry)
+        studentGrades.push({
+          uuid: student,
+          name: studentName,
+          grade
+        })
+      }
+
+      const professorName = (await users.findOne({uuid: dbClass.professor_uuid}, {session, projection: {name: 1}}))!.name
+
+      return {
+        props: {
+          className: dbClass.name,
+          classUuid: dbClass.uuid,
+          professorName,
+          studentGrades,
+          user: thisUser
+        }
+      }
+    })
+  })
+}
+
+export async function getClassList(client: MongoClient, session: MongoSession, user: ClientUser) {
+  const db = client.db()
+  const classes = db.collection<DbClass>('class')
+
+  const classMetas = []
+
+  const classCursor = classes.find({professor_uuid: user.uuid})
+  try {
+    for await (const dbClass of classCursor) {
+      classMetas.push({
+        name: dbClass.name,
+        uuid: dbClass.uuid
+      })
+    }
+  } finally {
+    await classCursor.close()
+  }
+
+  return {
+    props: {
+      classMetas,
+      user
+    }
+  }
 }
 
 export interface FindClassInputJson {
