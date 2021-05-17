@@ -445,7 +445,7 @@ export async function genProfessorAssignmentView(context: GetServerSidePropsCont
   })
 }
 
-export async function genNewAssignmentView(context: GetServerSidePropsContext) {
+export async function genMultiCategoryView(context: GetServerSidePropsContext) {
   const client = await connectToDB()
 
   return await htmlTransactionWithUser(client, context, async (session, thisUser) => {

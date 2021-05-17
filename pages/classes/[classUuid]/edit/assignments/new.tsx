@@ -1,6 +1,6 @@
 import {GetServerSideProps} from "next";
-import {genNewAssignmentView} from "../../../../../lib/server/class";
-import {ClassCategory, ClientUser} from "../../../../../lib/common/types";
+import {genMultiCategoryView} from "../../../../../lib/server/class";
+import {MultiCategoryProps} from "../../../../../lib/common/types";
 import Error from "next/error";
 import React, {ChangeEvent, useState} from "react";
 import TopBar from "../../../../../lib/client/TopBar";
@@ -11,16 +11,10 @@ import {sendApiPostRequest} from "../../../../../lib/client/util";
 import Link from "next/link";
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
-  return await genNewAssignmentView(context)
+  return await genMultiCategoryView(context)
 }
 
-export interface NewAssignmentProps {
-  categories: ClassCategory[]
-  classUuid: string
-  user: ClientUser
-}
-
-export default function NewAssignment(rawProps: NewAssignmentProps | {error: number}) {
+export default function NewAssignment(rawProps: MultiCategoryProps | {error: number}) {
   const router = useRouter()
   const [selectedCategory, setSelectedCategory] = useState(() => {
     let category
@@ -39,7 +33,7 @@ export default function NewAssignment(rawProps: NewAssignmentProps | {error: num
   const [creating, setCreating] = useState(false)
   const [status, setStatus] = useState('')
 
-  const props = rawProps as NewAssignmentProps
+  const props = rawProps as MultiCategoryProps
   if (typeof (rawProps as any).error !== 'undefined') {
     return <Error statusCode={(rawProps as any).error}/>
   }

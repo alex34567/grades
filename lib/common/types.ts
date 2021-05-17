@@ -91,3 +91,9 @@ export interface CategoryViewProps {
   classUuid: string
   user: ClientUser
 }
+
+export interface MultiCategoryProps {
+  categories: ClassCategory[]
+  classUuid: string
+  user: ClientUser
+}

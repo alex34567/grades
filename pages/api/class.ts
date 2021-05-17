@@ -3,7 +3,14 @@ import {LoginResponse} from "./login";
 import {connectToDB} from "../../lib/server/db";
 import {jsonTransactionWithUser} from "../../lib/server/util";
 import {DbClass, DbGradeEntry, withFindClassJson} from "../../lib/server/class";
-import {Assignment, CategoryMeta, EditAssignment, SingleGradeEntry, UserType} from "../../lib/common/types";
+import {
+  Assignment,
+  CategoryMeta,
+  ClassCategory,
+  EditAssignment,
+  SingleGradeEntry,
+  UserType
+} from "../../lib/common/types";
 import {v4 as uuidv4} from "uuid";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse<LoginResponse>) {
@@ -341,6 +348,82 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
             statusCode: 200,
             body: {
               status: 'Assignments reordered'
+            }
+          }
+        }
+        case 'reorder_categories': {
+          if (!Array.isArray(req.body.categoryUuids)) {
+            return {
+              statusCode: 400,
+              body: {
+                status: 'Bad category uuids'
+              }
+            }
+          }
+
+          for (let uuid of req.body.categoryUuids) {
+            if (typeof uuid !== 'string') {
+              return {
+                statusCode: 400,
+                body: {
+                  status: 'Bad category uuids'
+                }
+              }
+            }
+          }
+
+          const categoryUuids: string[] = req.body.categoryUuids
+
+          if (dbClass.category.length !== categoryUuids.length) {
+            return {
+              statusCode: 400,
+              body: {
+                status: 'Category lengths do not match'
+              }
+            }
+          }
+
+          const uuidToCategory = new Map<string, ClassCategory>()
+
+          for (let category of dbClass.category) {
+            uuidToCategory.set(category.uuid, category)
+          }
+
+          const sortedUuids = categoryUuids.concat()
+          sortedUuids.sort()
+          for (let i = 0; i < sortedUuids.length - 1; i++) {
+            if (sortedUuids[i] === sortedUuids[i + 1]) {
+              return {
+                statusCode: 400,
+                body: {
+                  status: 'Duplicate category uuids'
+                }
+              }
+            }
+          }
+
+          const newCategoryList = []
+          for (let uuid of categoryUuids) {
+            const category = uuidToCategory.get(uuid)
+            if (!category) {
+              return {
+                statusCode: 400,
+                body: {
+                  status: 'Unknown category'
+                }
+              }
+            }
+            newCategoryList.push(category)
+          }
+
+          dbClass.category = newCategoryList
+
+          await classes.replaceOne({uuid: dbClass.uuid}, dbClass, {session})
+
+          return {
+            statusCode: 200,
+            body: {
+              status: 'Categories reordered'
             }
           }
         }

@@ -99,6 +99,8 @@ export function ClassEdit(props: ClassViewProps) {
       <h1>{`Class: ${props.classView.name}`}</h1>
       <h2>{`Professor: ${props.classView.professor_name}`}</h2>
       <Link href={`/classes/${props.classView.uuid}/edit/categories/new`}>New Category</Link>
+      <span> </span>
+      <Link href={`/classes/${props.classView.uuid}/edit/categories/category_order`}>Reorder Category</Link>
       <table className={mainTable.MainTable}>
         <tbody>
         {categories}
