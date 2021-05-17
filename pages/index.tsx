@@ -6,7 +6,7 @@ import {ClientUser, UserType} from "../lib/common/types";
 import {genStudentClassOverview, getClassList} from "../lib/server/class";
 import StudentPage from "./students/[userUuid]";
 import {htmlTransactionWithUser} from "../lib/server/util";
-import ProfessorClassList from "../lib/client/ProfessorClassList";
+import ClassList from "../lib/client/ClassList";
 
 interface IndexProps {
   type: HomepageTypes
@@ -78,7 +78,7 @@ export default function Index(props: IndexProps) {
       Component = StudentPage
       break
     case HomepageTypes.professor:
-      Component = ProfessorClassList
+      Component = ClassList
       break
   }
   return <Component {...props.props}/>

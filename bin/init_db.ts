@@ -63,12 +63,6 @@ export default async function initDb(client: MongoClient, session: MongoSession)
   const grade_entry = await db.collection('grade_entry')
   await grade_entry.createIndexes([{
     key: {
-      uuid: 1,
-    },
-    name: 'uuid',
-    unique: true,
-  }, {
-    key: {
       class_uuid: 1,
       student_uuid: 1,
     },

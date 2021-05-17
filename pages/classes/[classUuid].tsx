@@ -1,6 +1,6 @@
 import {GetServerSideProps} from "next";
 import {getProfessorClassOverview} from "../../lib/server/class";
-import {ClientUser, Fraction} from "../../lib/common/types";
+import {ClientUser, Fraction, UserType} from "../../lib/common/types";
 import ErrorHandler, {HtmlError} from "../../lib/client/ErrorHandler";
 import React from "react";
 import TopBar from "../../lib/client/TopBar";
@@ -46,12 +46,18 @@ export function ProfessorClassOverview(props: ProfessorClassOverviewProps) {
     )
   }
 
+  let admin
+  if (props.user.type === UserType.admin) {
+    admin = <div><Link href={`/classes/${props.classUuid}/admin`}>Admin Class Tools</Link></div>
+  }
+
   return (
     <div>
       <TopBar user={props.user}/>
       <h1>{`Class Name: ${props.className}`}</h1>
       <h2>{`Professor Name: ${props.professorName}`}</h2>
       <Link href={`/classes/${props.classUuid}/edit`}>Edit</Link>
+      {admin}
       <table className={MainTable.MainTable}>
         <thead>
           <tr>

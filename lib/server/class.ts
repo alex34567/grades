@@ -1,4 +1,4 @@
-import {MongoClient, ClientSession as MongoSession} from 'mongodb'
+import {ClientSession, ClientSession as MongoSession, MongoClient} from 'mongodb'
 import {DbUser, withFindUserHtml} from './user'
 import {ClassCategory, ClientUser, Fraction, UserInfo, UserType} from "../common/types";
 import {connectToDB} from "./db";
@@ -49,7 +49,7 @@ export async function deleteClass(client: MongoClient, session: MongoSession, db
   await grades.deleteMany({class_uuid: dbClass.uuid}, {session})
 }
 
-export async function dropStudent(client: MongoClient, session: MongoSession, student: UserInfo, dbClass: DbClass) {
+export async function dropStudent(client: MongoClient, session: ClientSession, dbClass: DbClass, student: UserInfo) {
   const db = client.db()
 
   const classes = db.collection<DbClass>('class')
@@ -574,15 +574,24 @@ export async function getProfessorClassOverview(context: GetServerSidePropsConte
 export async function getClassList(client: MongoClient, session: MongoSession, user: ClientUser) {
   const db = client.db()
   const classes = db.collection<DbClass>('class')
+  const users = db.collection<UserInfo>('users')
 
   const classMetas = []
 
-  const classCursor = classes.find({professor_uuid: user.uuid})
+  let query = {}
+  if (user.type !== UserType.admin) {
+    query = {professor_uuid: user.uuid}
+  }
+
+  const classCursor = classes.find(query).sort({professor_uuid: 1})
   try {
     for await (const dbClass of classCursor) {
+      const professorName = (await users.findOne({uuid: dbClass.professor_uuid}, {session, projection: {name: 1}}))!.name
+
       classMetas.push({
         name: dbClass.name,
-        uuid: dbClass.uuid
+        uuid: dbClass.uuid,
+        professorName
       })
     }
   } finally {

@@ -1,4 +1,4 @@
-import {MongoClient, ClientSession as MongoSession} from 'mongodb'
+import {MongoClient, ClientSession as MongoSession, ClientSession} from 'mongodb'
 import {v4 as uuidv4} from 'uuid'
 import * as crypto from 'crypto'
 import {promisify} from 'util'
@@ -95,7 +95,7 @@ export async function deleteUser(client: MongoClient, session: MongoSession, use
       if (dbClass.professor_uuid === user.uuid) {
         await deleteClass(client, session, dbClass)
       } else {
-        await dropStudent(client, session, user, dbClass)
+        await dropStudent(client, session, dbClass, user)
       }
     }
   } finally {
@@ -190,7 +190,7 @@ export async function forgeSession(client: MongoClient, session: MongoSession, d
   return ret
 }
 
-export async function changePassword(client: MongoClient, session: MongoSession, dbUser: DbUser, password: string) {
+export async function changePassword(client: MongoClient, session: ClientSession, dbUser: UserInfo, password: string) {
   const db = client.db()
   const sessions = db.collection<Session>('sessions')
   const users = db.collection<DbUser>('users')

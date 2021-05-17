@@ -3,8 +3,8 @@ import {LoginResponse} from "./login";
 import {jsonTransactionWithUser} from "../../lib/server/util";
 import {connectToDB} from "../../lib/server/db";
 import {USER_TYPES, UserType} from "../../lib/common/types";
-import {createUser, DbUser, deleteUser, withFindUserJson} from "../../lib/server/user";
-import {addStudent, createClass, deleteClass, withFindClassJson} from "../../lib/server/class";
+import {changePassword, createUser, DbUser, deleteUser, withFindUserJson} from "../../lib/server/user";
+import {addStudent, createClass, deleteClass, dropStudent, withFindClassJson} from "../../lib/server/class";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse<LoginResponse>) {
   const client = await connectToDB()
@@ -72,7 +72,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
           }
         }
 
-        const exists = Boolean(users.findOne({login_name: loginName}, {session, projection: {login_name: 1}}))
+        const exists = Boolean(await users.findOne({login_name: loginName}, {session, projection: {login_name: 1}}))
         if (exists) {
           return {
             statusCode: 409,
@@ -89,13 +89,35 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
             status: 'User created'
           }
         }
+      case 'force_change_password':
+        return await withFindUserJson(client, session, req.body, async (user) => {
+          if (typeof req.body.password !== 'string') {
+            return {
+              statusCode: 400,
+              body: {
+                status: 'Bad Password'
+              }
+            }
+          }
+
+          const password: string = req.body.password
+
+          await changePassword(client, session, user, password)
+
+          return {
+            statusCode: 400,
+            body: {
+              status: 'Password changed'
+            }
+          }
+        })
       case 'delete_user':
         return await withFindUserJson(client, session, req.body, async (delUser) => {
           await deleteUser(client, session, delUser)
           return {
             statusCode: 200,
             body: {
-              status: 'User is deleted'
+              status: 'User has been deleted'
             }
           }
         })
@@ -151,6 +173,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
               statusCode: 200,
               body: {
                 status: 'Student added to class'
+              }
+            }
+          })
+        })
+      case 'drop_student_from_class':
+        return await withFindUserJson(client, session, req.body, async (student) => {
+          return await withFindClassJson(client, session, req.body, async (dbClass) => {
+            await dropStudent(client, session, dbClass, student)
+
+            return {
+              statusCode: 200,
+              body: {
+                status: 'Student dropped from class'
               }
             }
           })

@@ -1,4 +1,4 @@
-import {ClientUser} from "../common/types";
+import {ClientUser, UserType} from "../common/types";
 import styles from '../../styles/TopBar.module.css'
 import Link from 'next/link'
 import {useRouter} from "next/router";
@@ -26,6 +26,16 @@ export default function TopBar(props: {user: ClientUser | null}) {
     )
   }
 
+  let admin
+  if (props.user && props.user.type == UserType.admin) {
+    admin = (
+      <>
+        <Link href='/admin'>Admin</Link>
+        <span> </span>
+      </>
+    )
+  }
+
   let changePassword
   if (props.user) {
     changePassword = <Link href='/change_password'><a href='/change_password'>Change Password</a></Link>
@@ -36,7 +46,7 @@ export default function TopBar(props: {user: ClientUser | null}) {
       <div className={styles.Home}>
         <Link href='/'>Home</Link>
         <span> </span>
-        <span> </span>
+        {admin}
         {changePassword}
       </div>
       <div className={styles.Padding}/>

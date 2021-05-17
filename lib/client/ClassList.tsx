@@ -5,20 +5,22 @@ import {ClientUser} from "../common/types";
 
 export interface ClassMeta {
   name: string,
+  professorName: string,
   uuid: string
 }
 
-export interface ProfessorClassListProps {
+export interface ClassListProps {
   classMetas: ClassMeta[],
   user: ClientUser
 }
 
-export default function ProfessorClassList(props: ProfessorClassListProps) {
+export default function ClassList(props: ClassListProps) {
   const classes = []
   for (const profClass of props.classMetas) {
     classes.push(
       <tr key={profClass.uuid}>
         <td><Link href={`/classes/${profClass.uuid}`}>{profClass.name}</Link></td>
+        <td>{profClass.professorName}</td>
       </tr>
     )
   }
@@ -29,7 +31,10 @@ export default function ProfessorClassList(props: ProfessorClassListProps) {
       <h1>Your classes</h1>
       <table className={MainTable.MainTable}>
         <thead>
-          <tr><th>Name</th></tr>
+          <tr>
+            <th>Name</th>
+            <th>Professor Name</th>
+          </tr>
         </thead>
         <tbody>
           {classes}

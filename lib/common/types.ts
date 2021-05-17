@@ -98,3 +98,9 @@ export interface MultiCategoryProps {
   classUuid: string
   user: ClientUser
 }
+
+export interface ClassAdminProps {
+  classUuid: string,
+  className: string,
+  user: ClientUser
+}
