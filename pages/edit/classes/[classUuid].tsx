@@ -28,7 +28,7 @@ export function ClassEdit(props: ClassViewProps) {
   for (const category of props.classView.categories) {
     const assignments = []
     for (const assignment of category.assignments) {
-      async function onDelete() {
+      async function onAssignDelete() {
         if (updating) {
           return
         }
@@ -61,13 +61,14 @@ export function ClassEdit(props: ClassViewProps) {
           <td>
             <Link href={assignmentEditUrl}>Edit</Link>
             <span> </span>
-            <a href='#' onClick={onDelete}>Delete</a>
+            <a href='#' onClick={onAssignDelete}>Delete</a>
           </td>
         </tr>
       )
     }
     const newAssignmentUrl = `/edit/classes/${props.classView.uuid}/assignments/new?categoryUuid=${category.uuid}`
     const reorderUrl = `/edit/classes/${props.classView.uuid}/categories/${category.uuid}/assignment_order`
+    const editCategoryUrl = `/edit/classes/${props.classView.uuid}/categories/${category.uuid}`
     categories.push(
       <React.Fragment key={category.uuid}>
         <tr>
@@ -76,14 +77,14 @@ export function ClassEdit(props: ClassViewProps) {
           <th scope='col'>Actions</th>
         </tr>
         <tr>
-          <th>{category.name}</th>
+          <th><a href={editCategoryUrl}>{category.name}</a></th>
           <td>{millipointToString(category.weight)}</td>
           <td>
             <a href={newAssignmentUrl}>New Assignment</a>
             <span> </span>
             <a href={reorderUrl}>Reorder Assignments</a>
             <span> </span>
-            <a href='#'>Delete Category</a>
+            <a href={editCategoryUrl}>Edit Category</a>
           </td>
         </tr>
         {assignments}
@@ -97,6 +98,7 @@ export function ClassEdit(props: ClassViewProps) {
       <h3>{status}</h3>
       <h1>{`Class: ${props.classView.name}`}</h1>
       <h2>{`Professor: ${props.classView.professor_name}`}</h2>
+      <Link href={`/edit/classes/${props.classView.uuid}/categories/new`}>New Category</Link>
       <table className={mainTable.MainTable}>
         <tbody>
         {categories}

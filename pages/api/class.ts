@@ -3,7 +3,7 @@ import {LoginResponse} from "./login";
 import {connectToDB} from "../../lib/server/db";
 import {jsonTransactionWithUser} from "../../lib/server/util";
 import {DbClass, DbGradeEntry, withFindClassJson} from "../../lib/server/class";
-import {Assignment, EditAssignment, SingleGradeEntry, UserType} from "../../lib/common/types";
+import {Assignment, CategoryMeta, EditAssignment, SingleGradeEntry, UserType} from "../../lib/common/types";
 import {v4 as uuidv4} from "uuid";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse<LoginResponse>) {
@@ -341,6 +341,132 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
             statusCode: 200,
             body: {
               status: 'Assignments reordered'
+            }
+          }
+        }
+        case 'new_category': {
+          if (typeof req.body.name !== 'string') {
+            return {
+              statusCode: 400,
+              body: {
+                status: 'Bad name'
+              }
+            }
+          }
+
+          const name: string = req.body.name
+
+          if (typeof req.body.weight !== 'number') {
+            return {
+              statusCode: 400,
+              body: {
+                status: 'Bad weight'
+              }
+            }
+          }
+          const weight: number = req.body.weight
+
+          dbClass.category.push({
+            name,
+            weight,
+            uuid: uuidv4(),
+            assignments: []
+          })
+
+          await classes.replaceOne({uuid: dbClass.uuid}, dbClass, {session})
+
+          return {
+            statusCode: 200,
+            body: {
+              status: 'Category created'
+            }
+          }
+        }
+        case 'edit_category': {
+          const validCategory = typeof req.body.categoryMeta === 'object' &&
+            typeof req.body.categoryMeta.name === 'string' &&
+            req.body.categoryMeta.name.length > 0 &&
+            typeof req.body.categoryMeta.uuid === 'string' &&
+            typeof req.body.categoryMeta.weight === 'number'
+
+          if (!validCategory) {
+            return {
+              statusCode: 400,
+              body: {
+                status: 'Bad category'
+              }
+            }
+          }
+
+          const categoryMeta: CategoryMeta = req.body.categoryMeta
+
+          const dbCategory = dbClass.category.find(c => c.uuid === categoryMeta.uuid)
+          if (!dbCategory) {
+            return {
+              statusCode: 404,
+              body: {
+                status: 'Category not found'
+              }
+            }
+          }
+
+          dbCategory.name = categoryMeta.name
+          dbCategory.weight = categoryMeta.weight
+
+          await classes.replaceOne({uuid: dbClass.uuid}, dbClass, {session})
+
+          return {
+            statusCode: 200,
+            body: {
+              status: 'Category updated'
+            }
+          }
+        }
+        case 'delete_category': {
+          if (typeof req.body.categoryUuid !== 'string') {
+            return {
+              statusCode: 400,
+              body: {
+                status: 'Bad category uuid'
+              }
+            }
+          }
+
+          const categoryUuid: string = req.body.categoryUuid
+
+          const dbCategory = dbClass.category.find(c => c.uuid === categoryUuid)
+          if (!dbCategory) {
+            return {
+              statusCode: 404,
+              body: {
+                status: 'Category already gone'
+              }
+            }
+          }
+
+          const assignmentUuids = new Set<string>()
+          for (const assignment of dbCategory.assignments) {
+            assignmentUuids.add(assignment.uuid)
+          }
+
+          const gradeCursor = dbGrades.find({class_uuid: dbClass.uuid}, {session})
+          try {
+            for await (let gradeEntry of gradeCursor) {
+              gradeEntry.assignments = gradeEntry.assignments.filter(a => !assignmentUuids.has(a.assignment_uuid))
+              await dbGrades.replaceOne(
+                {class_uuid: gradeEntry.class_uuid, student_uuid: gradeEntry.student_uuid}, gradeEntry, {session})
+            }
+          } finally {
+            await gradeCursor.close()
+          }
+
+          dbClass.category = dbClass.category.filter(c => c.uuid !== categoryUuid)
+          await classes.replaceOne({uuid: dbClass.uuid}, dbClass, {session})
+
+          return {
+            statusCode: 200,
+            body: {
+              status: 'Category gone'
             }
           }
         }

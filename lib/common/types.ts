@@ -16,10 +16,13 @@ export interface ClientStudentClass extends ClientClass {
   categories: ClientStudentClassCategory[],
 }
 
-export interface ClassCategory {
+export interface CategoryMeta {
   name: string,
   uuid: string,
   weight: number,
+}
+
+export interface ClassCategory extends CategoryMeta {
   assignments: Assignment[],
 }
 

@@ -100,9 +100,7 @@ export default function NewAssignment(rawProps: NewAssignmentProps | {error: num
       <TopBar user={props.user}/>
       <Link href={`/edit/classes/${props.classUuid}`}>Back</Link>
       <h1>New Assignment</h1>
-      <br/>
       <h3>{status}</h3>
-      <br/>
       <label>Name: </label>
       <input className={nameClassName} type='text' onChange={onChangeName} value={name}/>
       <br/>
