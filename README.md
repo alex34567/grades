@@ -1,34 +1,55 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Grades
 
-## Getting Started
+## Example
+An example is deployed at https://grades-eight.vercel.app/
+The passwords are in passwords.txt
+Please do not destroy the site before I get a grade. (I made a db backup just in case)
 
-First, run the development server:
+## Deploying
+First `npm install`
 
+Set the environment variable `MONGO_URI` to the mongodb connect string.
+
+Create the database indexes:
 ```bash
-npm run dev
-# or
-yarn dev
+cd bin
+npx tsc
+node dist/bin/init_db.js
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Create the first admin:
+```bash
+cd bin
+npx tsc
+node dist/bin/new_admin.js
+```
 
-You can start editing the page by modifying `pages/index.js`. The page auto-updates as you edit the file.
+Then use `npm run build` and `npm run dev` as you would for a Next.js project.
 
-[API routes](https://nextjs.org/docs/api-routes/introduction) can be accessed on [http://localhost:3000/api/hello](http://localhost:3000/api/hello). This endpoint can be edited in `pages/api/hello.js`.
+## Screenshots
+![Student Overview](/screenshots/student_overview.png?raw=true)
 
-The `pages/api` directory is mapped to `/api/*`. Files in this directory are treated as [API routes](https://nextjs.org/docs/api-routes/introduction) instead of React pages.
+What a student sees when they log in.
 
-## Learn More
+![Login](/screenshots/login.png?raw=true)
 
-To learn more about Next.js, take a look at the following resources:
+What a student sees before they log in.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+![Student Class](/screenshots/student_example.png?raw=true)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
+A student viewing their class.
 
-## Deploy on Vercel
+![Professor Overview](/screenshots/professor_class.png?raw=true)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+A professor checking on their students.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+![Professor Assignments](/screenshots/class_edit.png?raw=true)
+
+A professor looking at their assignments.
+
+![Professor Grades](/screenshots/assignment_edit.png?raw=true)
+
+A professor about to disappoint a lot of people.
+
+![New User](/screenshots/new_user.png?raw=true)
+Where users come from.
