@@ -235,7 +235,7 @@ export async function genStudentClassView(context: GetServerSidePropsContext) {
           let categoryTotal = 0n
           const assignments = []
           for (const assignment of category.assignments) {
-            if (assignmentToGrade.get(assignment.uuid)) {
+            if (typeof assignmentToGrade.get(assignment.uuid) === 'number') {
               categoryTotal += BigInt(assignment.max_points)
             }
           }

@@ -234,7 +234,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
               }
             }
             dbGradeEntry.assignments = dbGradeEntry.assignments.filter(a => a.assignment_uuid !== assignment.uuid)
-            if (grade.grade) {
+            if (typeof grade.grade === 'number') {
               dbGradeEntry.assignments.push({
                 assignment_uuid: assignment.uuid,
                 grade: grade.grade
